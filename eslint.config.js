@@ -139,6 +139,16 @@ module.exports = defineConfig([
     // işlemedikleri için dosya adı ve regex sertleştirme kuralları burada
     // yalnız gürültü üretir. Uygulama kodunda bu kurallar açık kalır.
     files: ['scripts/**/*.{js,mjs}'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        Buffer: 'readonly',
+        URL: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+      },
+    },
     rules: {
       'no-console': 'off',
       'security/detect-non-literal-fs-filename': 'off',

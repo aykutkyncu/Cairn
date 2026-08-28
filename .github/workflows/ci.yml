@@ -46,6 +46,9 @@ jobs:
       - name: Şema ve RLS doğrulaması (PGlite, Docker'sız)
         run: npm run verify:schema
 
+      - name: Üyelik RPC doğrulaması (PGlite, Docker'sız)
+        run: npm run verify:membership
+
       - name: Birim testleri
         run: npm run test:ci
 

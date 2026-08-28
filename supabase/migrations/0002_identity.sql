@@ -181,6 +181,11 @@ comment on function public.circle_role_of(uuid) is
   'Çağıran kullanıcının verilen çemberdeki rolünü döndürür; üye değilse null.';
 
 -- İçerik yazabilen roller: owner ve caregiver. Viewer yalnız okur.
+--
+-- coalesce ZORUNLUDUR: circle_role_of() üye olmayan için NULL döner ve
+-- `NULL in (...)` de NULL'dır. RLS içinde NULL güvenli tarafta (false gibi)
+-- değerlendirilir, fakat PL/pgSQL'de `if not can_write_circle(...) then raise`
+-- yazıldığında `not NULL` = NULL olur, koşul tutmaz ve GUARD SESSİZCE ATLANIR.
 create or replace function public.can_write_circle(target_circle_id uuid)
 returns boolean
 language sql
@@ -188,10 +193,11 @@ stable
 security definer
 set search_path = public, pg_temp
 as $$
-  select public.circle_role_of(target_circle_id) in ('owner', 'caregiver');
+  select coalesce(public.circle_role_of(target_circle_id) in ('owner', 'caregiver'), false);
 $$;
 
 -- Üye yönetimi ve çember silme yalnız owner'a aittir.
+-- coalesce gerekçesi için can_write_circle notuna bakınız.
 create or replace function public.is_circle_owner(target_circle_id uuid)
 returns boolean
 language sql
@@ -199,7 +205,7 @@ stable
 security definer
 set search_path = public, pg_temp
 as $$
-  select public.circle_role_of(target_circle_id) = 'owner';
+  select coalesce(public.circle_role_of(target_circle_id) = 'owner', false);
 $$;
 
 revoke execute on function public.is_circle_member(uuid) from public;

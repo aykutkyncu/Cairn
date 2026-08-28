@@ -112,7 +112,18 @@ Faz 00 kapsamında kod tarafı tamamdır, fakat aşağıdakiler depo sahibinin m
 - Depo henüz bir GitHub remote'una bağlı değildir; CI iş akışı ilk push'ta çalışacaktır.
 - `gitleaks` yerel makinede kurulu değildir; çalışma ağacı taraması secretlint ile, git
   geçmişi taraması CI'daki `gitleaks-action` ile yapılır.
-- Uygulama fiziksel cihazda veya emülatörde çalıştırılıp doğrulanmamıştır. Faz 01'in
+- Uygulama fiziksel cihazda veya emülatörde çalıştırılıp doğrulanmamıştır. Faz 03'ün
+  magic-link akışı gerçek bir e-posta ile hiç denenmemiştir; Supabase projesi
+  bağlanmadan denenemez.
+- **Gerçek eşzamanlılık sınanmamıştır.** PGlite tek bağlantılıdır; "aynı davet iki
+  eşzamanlı denemede yalnız bir kez kabul edilir" kriteri, kontrolün ve yazmanın tek bir
+  `UPDATE` ifadesinde (satır kilidiyle) olmasıyla tasarlanmıştır, fakat çok bağlantılı
+  koşuyla kanıtlanmamıştır. Kanıt CI'daki pgTAP işine aittir.
+- **Google/Apple ile giriş yoktur.** OAuth yapılandırması, izin ekranları, redirect
+  allowlist'i ve fiziksel cihaz testi olmadan eklenmemiştir.
+- **Universal Links / App Links yapılandırılmamıştır.** Davet bağlantısı yalnız `cairn://`
+  şemasıyla çalışır; uygulama kurulu değilken web fallback'i ve mağaza yönlendirmesi için
+  doğrulanmış bir alan adı gerekir. Faz 01'in
   kitchen-sink ekranı iki temada ve en büyük sistem yazı boyutunda gözle denetlenmemiştir;
   otomatik kontrast denetimi bunun yerine geçmez.
 - **pgTAP paketi henüz çalıştırılmamıştır.** Yerel makinede Docker olmadığı için

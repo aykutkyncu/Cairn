@@ -28,12 +28,23 @@ const DEVELOPMENT_MIN_LEVEL: LogLevel = 'debug';
 
 const isDevelopment = (): boolean => process.env.NODE_ENV !== 'production';
 
+/**
+ * Test koşumunda log yazılmaz.
+ *
+ * Gerekçe: test çıktısı bir doğrulama aracıdır. Uygulama logları arasına
+ * karışan bir hata mesajı fark edilmez hale gelir. Ayrıca beklenen hata
+ * yollarını sınayan testler, gerçek bir sorun varmış gibi görünen çıktı
+ * üretmemelidir.
+ */
+const isTestRun = (): boolean => process.env.NODE_ENV === 'test';
+
 export const shouldLog = (level: LogLevel, development: boolean): boolean => {
   const minimum = development ? DEVELOPMENT_MIN_LEVEL : PRODUCTION_MIN_LEVEL;
   return levelWeight(level) >= levelWeight(minimum);
 };
 
 const write = (level: LogLevel, event: string, context?: LogContext): void => {
+  if (isTestRun()) return;
   if (!shouldLog(level, isDevelopment())) return;
 
   const payload = context === undefined ? { event } : { event, ...context };
