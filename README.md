@@ -79,6 +79,31 @@ etkinleştirilmemiştir; bunu repo sahibi yapmalıdır (bkz. [Bilinen eksikler](
 - Sağlık verisi log, analytics, push bildirimi, hata kaydı veya URL içine yazılmaz.
 - Loglama yalnız `src/lib/logger.ts` üzerinden yapılır; `console` kullanımı lint ile engellenir.
 
+## Maliyet kısıtı: sıfır bütçe
+
+Cairn ücretli servis olmadan geliştirilir. Bugün doğrulanmış durum:
+
+**Ücretsiz:** Expo / React Native / TypeScript ve tüm geliştirme araçları, Expo Go ile
+cihazda çalıştırma, GitHub deposu, GitHub Actions (public repoda sınırsız dakika),
+branch protection ruleset'leri (public repoda), Supabase free tier, secretlint, gitleaks-action.
+
+**Karar:** Depo **public** tutulur. Gerekçesi, private repoda branch protection'ın GitHub
+Free planında bulunmamasıdır. Bu güvenliği düşürmez, çünkü sözleşme gereği kodda sır yoktur:
+`.env` izlenmez, `service_role` istemciye konmaz, sır taraması hem yerelde hem CI'da koşar.
+Sağlık verisi kodda değil, RLS ile korunan Supabase'de durur.
+
+**Sınırlar ve ileride ücret çıkabilecek noktalar:**
+
+| Kalem                              | Not                                                               |
+| ---------------------------------- | ----------------------------------------------------------------- |
+| Supabase free tier                 | ~1 hafta hareketsizlikte proje duraklar; 500 MB DB / 1 GB storage |
+| EAS Build                          | Free tier'da aylık sınırlı; alternatifi yerel Android derlemesi   |
+| Google Play yayını (Faz 16)        | 25 USD tek seferlik; pilot için APK doğrudan dağıtımı ücretsizdir |
+| App Store yayını (Faz 16)          | 99 USD/yıl + macOS; ücretsiz alternatifi yoktur                   |
+| Alan adı (Faz 03, Universal Links) | Ücretsiz alt alan adıyla denenebilir; doğrulanmadı                |
+
+Bu tablo bugünkü durumdur, garanti değildir. Sağlayıcı fiyatlandırması değişebilir.
+
 ## Bilinen eksikler
 
 Faz 00 kapsamında kod tarafı tamamdır, fakat aşağıdakiler depo sahibinin manuel adımını gerektirir:
@@ -88,6 +113,8 @@ Faz 00 kapsamında kod tarafı tamamdır, fakat aşağıdakiler depo sahibinin m
 - `gitleaks` yerel makinede kurulu değildir; çalışma ağacı taraması secretlint ile, git
   geçmişi taraması CI'daki `gitleaks-action` ile yapılır.
 - Uygulama fiziksel cihazda veya emülatörde çalıştırılıp doğrulanmamıştır.
+- `npm audit` 11 orta seviye bulgu raporlamaktadır (transitive bağımlılıklar); CI kapısı
+  `high` seviyesindedir, bu nedenle bu bulgular merge'ü engellemez.
 
 ## Fazlar
 
