@@ -6,7 +6,6 @@
 begin;
 select plan(16);
 
-create extension if not exists pgtap with schema extensions;
 
 \set owner_a     '11111111-1111-1111-1111-111111111111'
 \set owner_b     '44444444-4444-4444-4444-444444444444'
@@ -149,12 +148,12 @@ insert into public.tasks (id, circle_id, title, dtstart_local_date, dtstart_loca
 values (:'task_a', :'circle_a', 'Sabah ilacı', '2026-08-28', '08:00', :'owner_a');
 
 insert into public.task_completions (circle_id, task_id, occurrence_id, mutation_id, created_by)
-values (:'circle_a', :'task_a', '2026-08-28T08:00:00+03:00', extensions.gen_random_uuid(), :'owner_a');
+values (:'circle_a', :'task_a', '2026-08-28T08:00:00+03:00', gen_random_uuid(), :'owner_a');
 
 -- İki kişi aynı örneği aynı anda tamamlarsa yalnız biri kabul edilir.
 select throws_ok(
   format(
-    'insert into public.task_completions (circle_id, task_id, occurrence_id, mutation_id) values (%L, %L, %L, extensions.gen_random_uuid())',
+    'insert into public.task_completions (circle_id, task_id, occurrence_id, mutation_id) values (%L, %L, %L, gen_random_uuid())',
     :'circle_a', :'task_a', '2026-08-28T08:00:00+03:00'
   ),
   '23505',

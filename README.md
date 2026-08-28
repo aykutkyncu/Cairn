@@ -115,11 +115,12 @@ Faz 00 kapsamında kod tarafı tamamdır, fakat aşağıdakiler depo sahibinin m
 - Uygulama fiziksel cihazda veya emülatörde çalıştırılıp doğrulanmamıştır. Faz 01'in
   kitchen-sink ekranı iki temada ve en büyük sistem yazı boyutunda gözle denetlenmemiştir;
   otomatik kontrast denetimi bunun yerine geçmez.
-- **pgTAP testleri hiç çalıştırılmamıştır.** Yerel makinede Docker kurulu
-  olmadığı için `supabase db start` / `supabase test db` koşulamadı. Migration'lar
-  bir veritabanına hiç uygulanmadı; sözdizimi ve bağımlılık sırası doğrulanmadı.
-  CI'daki `database` işi bunu ilk push'ta çalıştıracaktır — o çıktı görülmeden
-  "RLS doğru çalışıyor" denemez.
+- **pgTAP paketi henüz çalıştırılmamıştır.** Yerel makinede Docker olmadığı için
+  `supabase test db` koşulamadı; CI'daki `database` işi bunu ilk push'ta
+  çalıştıracaktır. Bu arada `npm run verify:schema`, migration'ları gerçek bir
+  Postgres motorunda (PGlite/WASM) uygulayıp aynı davranışları 49 kontrolle
+  sınıyor. Supabase'in gerçek auth ve storage davranışı yine de yalnız pgTAP
+  koşusuyla kanıtlanır; buradaki auth/storage şemaları asgari taklittir.
 - `src/lib/database.types.ts` henüz yoktur. Elle yazmak yerine CI'ın şemadan
   üretmesi tercih edildi; ilk CI koşusundan sonra artifact olarak indirilip
   depoya eklenmelidir.

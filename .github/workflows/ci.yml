@@ -43,6 +43,9 @@ jobs:
       - name: Migration statik tutarlılık kontrolü
         run: npm run verify:migrations
 
+      - name: Şema ve RLS doğrulaması (PGlite, Docker'sız)
+        run: npm run verify:schema
+
       - name: Birim testleri
         run: npm run test:ci
 

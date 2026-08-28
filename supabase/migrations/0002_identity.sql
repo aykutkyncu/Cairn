@@ -25,7 +25,7 @@ comment on table public.profiles is
 -- ---------------------------------------------------------------------------
 
 create table public.circles (
-  id uuid primary key default extensions.gen_random_uuid(),
+  id uuid primary key default gen_random_uuid(),
   -- Bakılan kişinin adı özel nitelikli veriye işaret eder; log ve push'a yazılmaz.
   care_recipient_name text not null check (length(trim(care_recipient_name)) between 1 and 200),
   -- IANA zaman dilimi adı. Görev tekrarı ve günlük özet cihaz saatini değil bunu kullanır.
@@ -69,7 +69,7 @@ alter table public.circles
 -- ---------------------------------------------------------------------------
 
 create table public.circle_members (
-  id uuid primary key default extensions.gen_random_uuid(),
+  id uuid primary key default gen_random_uuid(),
   circle_id uuid not null references public.circles (id) on delete cascade,
   user_id uuid not null references auth.users (id) on delete cascade,
   role public.circle_role not null default 'caregiver',
@@ -96,7 +96,7 @@ create index circle_members_circle_active_idx
 -- ---------------------------------------------------------------------------
 
 create table public.invitations (
-  id uuid primary key default extensions.gen_random_uuid(),
+  id uuid primary key default gen_random_uuid(),
   circle_id uuid not null references public.circles (id) on delete cascade,
   -- YALNIZ hash saklanır. Düz token veritabanına hiçbir koşulda yazılmaz;
   -- bağlantı yalnız üretim anında istemciye döner.
@@ -254,9 +254,19 @@ create policy profiles_update_self on public.profiles
 alter table public.circles enable row level security;
 alter table public.circles force row level security;
 
+-- NOT: SELECT politikasında `deleted_at is null` filtresi BİLİNÇLİ OLARAK YOKTUR.
+-- İki nedeni var:
+--   1. Çevrimdışı senkronizasyon silmeyi görebilmelidir. Silinen satır SELECT
+--      politikasıyla gizlenirse cihaz silmeyi hiç öğrenemez.
+--   2. `update ... set deleted_at = now() ... returning` ifadesi, RETURNING
+--      nedeniyle yeni satırı SELECT politikasına karşı da denetler. Filtre
+--      politikada olursa yumuşak silme "new row violates row-level security"
+--      hatasıyla reddedilir.
+-- Yetki zaten is_circle_member() içinde denetlenir; o fonksiyon üyeliğin aktif
+-- olmasını şart koşar. Aktif kayıt filtresi sorgu katmanında uygulanır.
 create policy circles_select_member on public.circles
   for select to authenticated
-  using (deleted_at is null and public.is_circle_member(id));
+  using (public.is_circle_member(id));
 
 -- Yeni çember kuran kişi kendini created_by olarak yazar; owner üyeliği
 -- uygulama katmanında aynı işlemde eklenir.
@@ -272,9 +282,10 @@ create policy circles_update_owner on public.circles
 alter table public.circle_members enable row level security;
 alter table public.circle_members force row level security;
 
+-- Aktif kayıt filtresi için yukarıdaki circles_select_member notuna bakınız.
 create policy circle_members_select_member on public.circle_members
   for select to authenticated
-  using (deleted_at is null and public.is_circle_member(circle_id));
+  using (public.is_circle_member(circle_id));
 
 -- Üye ekleme yalnız owner'a aittir. Davetle katılma atomik RPC üzerinden
 -- yapılır (Faz 03) ve bu politikadan geçmez.

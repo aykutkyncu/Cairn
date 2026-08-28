@@ -7,9 +7,8 @@
 -- iddialarının kanıtıdır. Kanıt çalıştırılmadan bu iddialar yapılmaz.
 
 begin;
-select plan(26);
+select plan(27);
 
-create extension if not exists pgtap with schema extensions;
 
 -- ---------------------------------------------------------------------------
 -- Sabitler: iki ayrı çember, dört kullanıcı
@@ -334,6 +333,19 @@ select lives_ok(
     :'circle_a', :'caregiver_a'
   ),
   'Caregiver kendi üyeliğini bırakabilir'
+);
+
+-- Regresyon koruması: SELECT politikasına `deleted_at is null` geri eklenirse
+-- RETURNING'li yumuşak silme "new row violates row-level security" ile patlar
+-- ve çevrimdışı cihaz silmeyi hiç öğrenemez.
+set local request.jwt.claims to '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+
+select lives_ok(
+  format(
+    'update public.circle_members set deleted_at = now() where circle_id = %L and user_id = %L returning id',
+    :'circle_a', :'viewer_a'
+  ),
+  'RETURNING ile yumuşak silme RLS tarafından reddedilmez'
 );
 
 select * from finish();

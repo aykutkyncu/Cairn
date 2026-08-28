@@ -9,7 +9,7 @@
 -- yetkisi varsa ulaşır.
 
 create table public.daily_digests (
-  id uuid primary key default extensions.gen_random_uuid(),
+  id uuid primary key default gen_random_uuid(),
   circle_id uuid not null references public.circles (id) on delete cascade,
   -- Çemberin zaman dilimindeki gün. UTC günü değil.
   digest_local_date date not null,
@@ -59,7 +59,7 @@ comment on function public.purge_expired_daily_digests(integer) is
 -- ---------------------------------------------------------------------------
 
 create table public.device_push_tokens (
-  id uuid primary key default extensions.gen_random_uuid(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
   -- Expo push token. Kendi başına sağlık verisi değildir, fakat cihazı
   -- tanımlar; oturum kapanışında ve DeviceNotRegistered dönüşünde silinir.
@@ -87,7 +87,7 @@ create index device_push_tokens_active_idx
 -- kişinin AYRI açık rızası varsa gönderilebilir; teknik kapı budur.
 
 create table public.consents (
-  id uuid primary key default extensions.gen_random_uuid(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
   -- Rıza çember bağlamlı olabilir (ör. bu çemberin verisi için AI işleme).
   circle_id uuid references public.circles (id) on delete cascade,

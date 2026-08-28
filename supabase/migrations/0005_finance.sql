@@ -8,7 +8,7 @@
 -- saklanır. Çemberin varsayılan bölüşümü değişirse geçmiş masraflar değişmez.
 
 create table public.expenses (
-  id uuid primary key default extensions.gen_random_uuid(),
+  id uuid primary key default gen_random_uuid(),
   circle_id uuid not null references public.circles (id) on delete cascade,
   -- Tutar kuruş cinsinden. 100 TL -> 10000.
   amount_minor bigint not null check (amount_minor > 0),
@@ -39,7 +39,7 @@ create index expenses_circle_period_idx
 -- ---------------------------------------------------------------------------
 
 create table public.expense_splits (
-  id uuid primary key default extensions.gen_random_uuid(),
+  id uuid primary key default gen_random_uuid(),
   expense_id uuid not null references public.expenses (id) on delete cascade,
   circle_id uuid not null references public.circles (id) on delete cascade,
   member_user_id uuid not null references auth.users (id) on delete restrict,
@@ -82,7 +82,7 @@ comment on function public.expense_split_is_balanced(uuid) is
 -- ---------------------------------------------------------------------------
 
 create table public.settlements (
-  id uuid primary key default extensions.gen_random_uuid(),
+  id uuid primary key default gen_random_uuid(),
   circle_id uuid not null references public.circles (id) on delete cascade,
   from_user_id uuid not null references auth.users (id) on delete restrict,
   to_user_id uuid not null references auth.users (id) on delete restrict,

@@ -7,8 +7,9 @@
 --   * Roller PostgreSQL enum'udur.
 --   * Silme fiziksel değildir: deleted_at + sync_tombstones ile senkronizasyona görünür.
 --   * Değişebilir kaynaklarda revision, çakışma çözümü için trigger ile artar.
-
-create extension if not exists "pgcrypto" with schema extensions;
+--
+-- UUID üretimi için gen_random_uuid() kullanılır. Bu, PostgreSQL 13'ten beri
+-- çekirdektedir; pgcrypto uzantısına bağımlılık bilinçli olarak yoktur.
 
 -- ---------------------------------------------------------------------------
 -- Enum'lar

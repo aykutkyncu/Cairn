@@ -28,6 +28,7 @@
     "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@secretlint/secretlint-rule-preset-recommend": "^13.0.5",
     "@testing-library/react-native": "^14.0.1",
     "@types/jest": "^30.0.0",
@@ -64,7 +65,8 @@
     "db:test": "supabase test db",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > src/lib/database.types.ts",
-    "verify:migrations": "node scripts/check-migrations.mjs"
+    "verify:migrations": "node scripts/check-migrations.mjs",
+    "verify:schema": "node scripts/verify-schema.mjs"
   },
   "private": true,
   "lint-staged": {

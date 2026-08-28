@@ -12,7 +12,7 @@
 -- ---------------------------------------------------------------------------
 
 create table public.tasks (
-  id uuid primary key default extensions.gen_random_uuid(),
+  id uuid primary key default gen_random_uuid(),
   circle_id uuid not null references public.circles (id) on delete cascade,
   kind public.task_kind not null default 'other',
   title text not null check (length(trim(title)) between 1 and 300),
@@ -51,7 +51,7 @@ create index tasks_circle_active_idx
 -- ---------------------------------------------------------------------------
 
 create table public.task_completions (
-  id uuid primary key default extensions.gen_random_uuid(),
+  id uuid primary key default gen_random_uuid(),
   circle_id uuid not null references public.circles (id) on delete cascade,
   task_id uuid not null references public.tasks (id) on delete cascade,
   -- Tekrarın hangi örneği. Kanonik biçim: çember zaman diliminde ISO-8601
@@ -93,7 +93,7 @@ comment on column public.task_completions.mutation_id is
 -- ---------------------------------------------------------------------------
 
 create table public.medications (
-  id uuid primary key default extensions.gen_random_uuid(),
+  id uuid primary key default gen_random_uuid(),
   circle_id uuid not null references public.circles (id) on delete cascade,
   name text not null check (length(trim(name)) between 1 and 200),
   dosage text,
@@ -124,7 +124,7 @@ create index medications_circle_active_idx
 -- ---------------------------------------------------------------------------
 
 create table public.health_records (
-  id uuid primary key default extensions.gen_random_uuid(),
+  id uuid primary key default gen_random_uuid(),
   circle_id uuid not null references public.circles (id) on delete cascade,
   -- Alerji, teşhis, doktor, ölçüm, not: tek tabloda tür ayrımıyla tutulur.
   record_type text not null check (
@@ -155,7 +155,7 @@ create index health_records_circle_type_idx
 -- ---------------------------------------------------------------------------
 
 create table public.documents (
-  id uuid primary key default extensions.gen_random_uuid(),
+  id uuid primary key default gen_random_uuid(),
   circle_id uuid not null references public.circles (id) on delete cascade,
   -- Storage nesne yolu. Düzen: <circle_id>/<uuid>.<ext>
   -- Dosya adı olarak UUID kullanılır; orijinal ad ayrı alanda tutulur, böylece
