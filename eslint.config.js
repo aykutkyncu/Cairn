@@ -69,6 +69,17 @@ module.exports = defineConfig([
           selector: 'TSAsExpression > TSAnyKeyword',
           message: 'any kullanımı sözleşme gereği yasaktır.',
         },
+        {
+          // Doğrudan renk değeri yalnız src/ui/theme.ts içinde tanımlanır.
+          selector: 'Literal[value=/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/]',
+          message:
+            'Doğrudan renk (hex) kullanılamaz. Rengi src/ui/theme.ts içinde semantik token olarak tanımla ve useTheme() ile kullan.',
+        },
+        {
+          selector: String.raw`Literal[value=/^(rgb|rgba|hsl|hsla)\(/]`,
+          message:
+            'Doğrudan renk fonksiyonu kullanılamaz. Rengi src/ui/theme.ts içinde semantik token olarak tanımla ve useTheme() ile kullan.',
+        },
       ],
     },
   },
@@ -89,6 +100,27 @@ module.exports = defineConfig([
       'no-restricted-imports': [
         'error',
         { paths: DATA_LAYER_IMPORTS, patterns: DATA_LAYER_IMPORT_PATTERNS },
+      ],
+    },
+  },
+  {
+    // Sunum katmanı: token aramaları (theme.colors[tone] gibi) anahtarı literal union
+    // olan, sabit ve kullanıcı girdisinden bağımsız erişimlerdir. detect-object-injection
+    // burada yalnız yanlış pozitif üretir ve okunabilirliği bozar. Kural, sunucu ve
+    // kullanıcı verisinin aktığı src/features ile src/lib altında açık kalır.
+    files: ['src/ui/**/*.{ts,tsx}', 'src/app/**/*.{ts,tsx}'],
+    rules: { 'security/detect-object-injection': 'off' },
+  },
+  {
+    // Tema tokenlarının tanımlandığı tek dosya: doğrudan renk değerine burada izin verilir.
+    files: ['src/ui/theme.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'TSAsExpression > TSAnyKeyword',
+          message: 'any kullanımı sözleşme gereği yasaktır.',
+        },
       ],
     },
   },

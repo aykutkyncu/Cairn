@@ -1,18 +1,27 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { View } from 'react-native';
+
+import { Text, useTheme } from '@/ui';
 
 export default function IndexScreen() {
+  const theme = useTheme();
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title} accessibilityRole="header">
+    <View
+      style={{
+        alignItems: 'center',
+        backgroundColor: theme.colors.surface,
+        flex: 1,
+        gap: theme.spacing.sm,
+        justifyContent: 'center',
+        padding: theme.spacing.xl,
+      }}
+    >
+      <Text accessibilityRole="header" variant="display">
         Cairn
       </Text>
-      <Text style={styles.subtitle}>Bakımı paylaşan aileler için ortak operasyon uygulaması.</Text>
+      <Text tone="inkSoft" style={{ textAlign: 'center' }}>
+        Bakımı paylaşan aileler için ortak operasyon uygulaması.
+      </Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { alignItems: 'center', flex: 1, gap: 8, justifyContent: 'center', padding: 24 },
-  subtitle: { fontSize: 16, textAlign: 'center' },
-  title: { fontSize: 32, fontWeight: '600' },
-});

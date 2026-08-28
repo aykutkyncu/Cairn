@@ -18,6 +18,12 @@ const EXPECTATIONS = [
     ruleId: 'no-restricted-imports',
     reason: 'src/app kuralına tabi dosya Supabase istemcisini doğrudan içe aktaramaz',
   },
+  {
+    file: 'tools/lint-fixtures/direct-color.ts',
+    ruleId: 'no-restricted-syntax',
+    reason: 'src/ui/theme.ts dışında doğrudan renk (hex/rgba) kullanılamaz',
+    minimumCount: 2,
+  },
 ];
 
 const eslint = new ESLint({ ignore: false });
@@ -29,7 +35,8 @@ for (const expectation of EXPECTATIONS) {
     (message) => message.ruleId === expectation.ruleId && message.severity === 2,
   );
 
-  if (matched.length === 0) {
+  const required = expectation.minimumCount ?? 1;
+  if (matched.length < required) {
     failures.push(
       `BEKLENEN HATA YOK: ${expectation.file} -> ${expectation.ruleId} (${expectation.reason})`,
     );

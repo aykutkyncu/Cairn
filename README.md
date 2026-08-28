@@ -50,7 +50,7 @@ npm start
 src/app/         Expo Router rotaları - yalnız görsel düzenleyici
 src/features/    Alan bazlı iş mantığı, hook ve repository katmanı
 src/lib/         Alan bağımsız altyapı (logger, istemciler, yardımcılar)
-src/ui/          Paylaşılan tasarım sistemi (Faz 01)
+src/ui/          Paylaşılan tasarım sistemi: tema tokenları + 13 erişilebilir bileşen
 src/constants/   Sabitler ve yapılandırma değerleri
 supabase/migrations/  Numaralı SQL migration'ları (Faz 02)
 supabase/tests/       pgTAP RLS davranış testleri (Faz 02)
@@ -112,7 +112,9 @@ Faz 00 kapsamında kod tarafı tamamdır, fakat aşağıdakiler depo sahibinin m
 - Depo henüz bir GitHub remote'una bağlı değildir; CI iş akışı ilk push'ta çalışacaktır.
 - `gitleaks` yerel makinede kurulu değildir; çalışma ağacı taraması secretlint ile, git
   geçmişi taraması CI'daki `gitleaks-action` ile yapılır.
-- Uygulama fiziksel cihazda veya emülatörde çalıştırılıp doğrulanmamıştır.
+- Uygulama fiziksel cihazda veya emülatörde çalıştırılıp doğrulanmamıştır. Faz 01'in
+  kitchen-sink ekranı iki temada ve en büyük sistem yazı boyutunda gözle denetlenmemiştir;
+  otomatik kontrast denetimi bunun yerine geçmez.
 - `npm audit` 11 orta seviye bulgu raporlamaktadır (transitive bağımlılıklar); CI kapısı
   `high` seviyesindedir, bu nedenle bu bulgular merge'ü engellemez.
 
