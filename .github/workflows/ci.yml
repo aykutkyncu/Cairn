@@ -40,6 +40,9 @@ jobs:
       - name: Mimari ve tip lint kurallarının kanıtı
         run: npm run verify:lint-rules
 
+      - name: Migration statik tutarlılık kontrolü
+        run: npm run verify:migrations
+
       - name: Birim testleri
         run: npm run test:ci
 
@@ -74,6 +77,57 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  database:
+    name: Veritabanı ve RLS testleri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Migration statik tutarlılık kontrolü
+        run: node scripts/check-migrations.mjs
+
+      - name: Supabase CLI kur
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Yerel Supabase yığınını başlat
+        # GitHub runner'ında Docker hazır gelir. Migration'lar bu adımda
+        # sıfırdan uygulanır; sözdizimi veya bağımlılık hatası burada patlar.
+        run: supabase db start
+
+      - name: pgTAP RLS testleri
+        run: supabase test db
+
+      - name: Veritabanı tiplerini üret
+        run: supabase gen types typescript --local > /tmp/database.types.generated.ts
+
+      - name: Tip sürüklenmesi kontrolü
+        # Dosya henüz commit edilmediyse hata değil: üretilen sürüm artifact
+        # olarak yüklenir ve depoya eklenmesi beklenir. Commit edildikten sonra
+        # bu adım şema ile kod arasındaki sürüklenmeyi yakalar.
+        run: |
+          if [ -f src/lib/database.types.ts ]; then
+            if ! diff -u src/lib/database.types.ts /tmp/database.types.generated.ts; then
+              echo "::error::src/lib/database.types.ts şema ile uyumsuz. 'npm run db:types' ile yeniden üret."
+              exit 1
+            fi
+          else
+            echo "::notice::src/lib/database.types.ts henüz depoda yok; üretilen sürüm artifact olarak yüklendi."
+          fi
+
+      - name: Üretilen tipleri sakla
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-types
+          path: /tmp/database.types.generated.ts
+          if-no-files-found: ignore
+
+      - name: Yığını durdur
+        if: always()
+        run: supabase stop --no-backup
 
   dependencies:
     name: Bağımlılık taraması

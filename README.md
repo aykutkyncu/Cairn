@@ -52,8 +52,8 @@ src/features/    Alan bazlı iş mantığı, hook ve repository katmanı
 src/lib/         Alan bağımsız altyapı (logger, istemciler, yardımcılar)
 src/ui/          Paylaşılan tasarım sistemi: tema tokenları + 13 erişilebilir bileşen
 src/constants/   Sabitler ve yapılandırma değerleri
-supabase/migrations/  Numaralı SQL migration'ları (Faz 02)
-supabase/tests/       pgTAP RLS davranış testleri (Faz 02)
+supabase/migrations/  Numaralı SQL migration'ları: şema, RLS, Storage, audit
+supabase/tests/       pgTAP RLS davranış testleri
 tools/lint-fixtures/  Kasıtlı kural ihlali örnekleri (yalnız doğrulama için)
 .github/workflows/    CI kapıları
 ```
@@ -115,6 +115,14 @@ Faz 00 kapsamında kod tarafı tamamdır, fakat aşağıdakiler depo sahibinin m
 - Uygulama fiziksel cihazda veya emülatörde çalıştırılıp doğrulanmamıştır. Faz 01'in
   kitchen-sink ekranı iki temada ve en büyük sistem yazı boyutunda gözle denetlenmemiştir;
   otomatik kontrast denetimi bunun yerine geçmez.
+- **pgTAP testleri hiç çalıştırılmamıştır.** Yerel makinede Docker kurulu
+  olmadığı için `supabase db start` / `supabase test db` koşulamadı. Migration'lar
+  bir veritabanına hiç uygulanmadı; sözdizimi ve bağımlılık sırası doğrulanmadı.
+  CI'daki `database` işi bunu ilk push'ta çalıştıracaktır — o çıktı görülmeden
+  "RLS doğru çalışıyor" denemez.
+- `src/lib/database.types.ts` henüz yoktur. Elle yazmak yerine CI'ın şemadan
+  üretmesi tercih edildi; ilk CI koşusundan sonra artifact olarak indirilip
+  depoya eklenmelidir.
 - `npm audit` 11 orta seviye bulgu raporlamaktadır (transitive bağımlılıklar); CI kapısı
   `high` seviyesindedir, bu nedenle bu bulgular merge'ü engellemez.
 

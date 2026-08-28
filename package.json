@@ -59,7 +59,12 @@
     "test:ci": "jest --ci --coverage",
     "scan:secrets": "secretlint \"**/*\"",
     "verify:lint-rules": "node scripts/verify-lint-rules.mjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:start": "supabase db start",
+    "db:test": "supabase test db",
+    "db:reset": "supabase db reset",
+    "db:types": "supabase gen types typescript --local > src/lib/database.types.ts",
+    "verify:migrations": "node scripts/check-migrations.mjs"
   },
   "private": true,
   "lint-staged": {

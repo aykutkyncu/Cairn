@@ -134,8 +134,16 @@ module.exports = defineConfig([
     rules: { 'security/detect-object-injection': 'off' },
   },
   {
+    // Depo bakım scriptleri: çalışma zamanında değil, geliştirici makinesinde ve
+    // CI'da koşarlar ve yalnız depoya ait dosyaları okurlar. Kullanıcı girdisi
+    // işlemedikleri için dosya adı ve regex sertleştirme kuralları burada
+    // yalnız gürültü üretir. Uygulama kodunda bu kurallar açık kalır.
     files: ['scripts/**/*.{js,mjs}'],
-    rules: { 'no-console': 'off' },
+    rules: {
+      'no-console': 'off',
+      'security/detect-non-literal-fs-filename': 'off',
+      'security/detect-unsafe-regex': 'off',
+    },
   },
   {
     files: ['*.config.js'],

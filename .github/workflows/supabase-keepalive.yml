@@ -1,0 +1,56 @@
+name: Supabase keepalive
+
+# Supabase free tier projeleri yeterince uzun süre hareketsiz kalırsa duraklatılır.
+# Bu iş akışı düzenli aralıkla zararsız bir okuma isteği göndererek projeyi
+# etkin tutmayı DENER.
+#
+# UYARI: Bu, projenin duraklatılmayacağının GARANTİSİ DEĞİLDİR. Sağlayıcı
+# politikası, kota ve etkinlik ölçütü değişebilir. Duraklamayı gerçekten
+# önlemek gerekiyorsa ücretli plan tek kesin yoldur.
+#
+# Güvenlik: yalnız PUBLIC/anon istemci bilgisi kullanılır. service_role
+# anahtarı bu iş akışına veya herhangi bir GitHub secret'ına konmaz.
+#
+# Kurulum (repo sahibi yapar):
+#   Settings -> Secrets and variables -> Actions
+#     SUPABASE_URL       = https://<proje>.supabase.co
+#     SUPABASE_ANON_KEY  = anon / publishable anahtar
+
+on:
+  schedule:
+    # Her pazartesi ve perşembe 06:00 UTC.
+    - cron: '0 6 * * 1,4'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Zararsız okuma isteği
+    runs-on: ubuntu-latest
+    # Secret tanımlı değilse iş sessizce atlanır; kurulum yapılmadan hata üretmez.
+    if: ${{ vars.SUPABASE_KEEPALIVE_ENABLED == 'true' }}
+    steps:
+      - name: REST uç noktasına anon istek gönder
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::warning::SUPABASE_URL veya SUPABASE_ANON_KEY tanımlı değil; keepalive atlandı."
+            exit 0
+          fi
+
+          # RLS nedeniyle anon istemci hiçbir satır göremez; yanıt boş dizi olur.
+          # Amaç veri okumak değil, projeyi etkin göstermektir.
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/circles?select=id&limit=1")
+
+          echo "HTTP $status"
+          if [ "$status" -ge 500 ]; then
+            echo "::error::Supabase 5xx döndürdü; proje duraklatılmış olabilir."
+            exit 1
+          fi
