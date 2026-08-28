@@ -1,0 +1,7 @@
+# Depoda tek satır sonu biçimi: LF. Windows checkout'ta da LF korunur.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.ttf binary
+*.otf binary

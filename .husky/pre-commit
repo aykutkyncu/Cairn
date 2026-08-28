@@ -1,0 +1,4 @@
+# Kolaylık katmanı: gerçek kalite kapısı CI ve branch protection'dır.
+# Bu kanca --no-verify ile atlanabilir; buna güvenme.
+npx lint-staged
+npx tsc --noEmit
