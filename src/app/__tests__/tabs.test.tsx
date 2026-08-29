@@ -22,8 +22,19 @@ jest.mock('@/features/circles', () => ({
 }));
 
 jest.mock('expo-router', () => ({
-  router: { push: jest.fn(), replace: jest.fn() },
+  router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() },
 }));
+
+// Bugün ekranı Faz 05'te gerçek veriye bağlandı; burada sınanan yalnız
+// çember kapısının dört durumu olduğu için hook taklit edilir. Ekranın
+// kendi davranışı `features/tasks/__tests__/day-plan-view.test.tsx`
+// içinde sınanır.
+const mockUseDayPlan = jest.fn();
+
+jest.mock('@/features/tasks', () => {
+  const actual = jest.requireActual('@/features/tasks');
+  return { ...actual, useDayPlan: () => mockUseDayPlan() };
+});
 
 const circle = {
   id: 'c-1',
@@ -38,12 +49,18 @@ const loading = { activeCircle: null, circles: [], isLoading: true, isError: fal
 const empty = { activeCircle: null, circles: [], isLoading: false, isError: false };
 const failed = { activeCircle: null, circles: [], isLoading: false, isError: true };
 
+/**
+ * Çember kapısının dört durumu her sekmede aynıdır. Bugün ekranı kendi
+ * başlığını gün planı görünümünden alır, bu yüzden başlık testlerinde
+ * ayrı ele alınır.
+ */
 const screens = [
-  ['Bugün', BugunScreen],
   ['Takvim', TakvimScreen],
   ['Dosya', DosyaScreen],
   ['Daha fazlası', DahaFazlasiScreen],
 ] as const;
+
+const allScreens = [...screens, ['Bugün', BugunScreen]] as const;
 
 const renderScreen = (Screen: () => React.JSX.Element) =>
   render(
@@ -52,9 +69,22 @@ const renderScreen = (Screen: () => React.JSX.Element) =>
     </ThemeProvider>,
   );
 
+const emptyDayPlan = {
+  plan: { localDate: '2026-08-28', blocks: [], overdue: [], total: 0, completed: 0 },
+  isLoading: false,
+  isError: false,
+  isOnline: true,
+  pendingCount: 0,
+  complete: jest.fn(),
+  undo: jest.fn(),
+  refetch: jest.fn(),
+};
+
 describe('sekme ekranları', () => {
   beforeEach(() => {
     mockUseActiveCircle.mockReset();
+    mockUseDayPlan.mockReset();
+    mockUseDayPlan.mockReturnValue(emptyDayPlan);
   });
 
   it.each(screens)('%s başlığını erişilebilir başlık olarak gösterir', async (title, Screen) => {
@@ -80,7 +110,7 @@ describe('sekme ekranları', () => {
     expect(getByLabelText('İçerik yükleniyor')).toBeTruthy();
   });
 
-  it.each(screens)('%s çember yokken kurma çağrısı gösterir', async (_title, Screen) => {
+  it.each(allScreens)('%s çember yokken kurma çağrısı gösterir', async (_title, Screen) => {
     // Arrange
     mockUseActiveCircle.mockReturnValue(empty);
 
@@ -91,7 +121,7 @@ describe('sekme ekranları', () => {
     expect(getByText('Henüz bir çemberin yok')).toBeTruthy();
   });
 
-  it.each(screens)('%s hata durumunda teknik ayrıntı göstermez', async (_title, Screen) => {
+  it.each(allScreens)('%s hata durumunda teknik ayrıntı göstermez', async (_title, Screen) => {
     // Arrange
     mockUseActiveCircle.mockReturnValue(failed);
 
@@ -110,8 +140,38 @@ describe('sekme ekranları', () => {
     // yalnız çember değiştiricide, kullanıcının bakışında bulunur.
     mockUseActiveCircle.mockReturnValue(loaded);
 
-    const { toJSON } = await renderScreen(BugunScreen);
+    const { toJSON } = await renderScreen(TakvimScreen);
 
     expect(JSON.stringify(toJSON())).not.toContain('Fatma Demir');
+  });
+
+  it('Bugün ekranı gün planını gösterir', async () => {
+    // Arrange
+    mockUseActiveCircle.mockReturnValue(loaded);
+
+    // Act
+    const { getByRole, getByText } = await renderScreen(BugunScreen);
+
+    // Assert
+    expect(getByRole('header', { name: 'Bugün' })).toBeTruthy();
+    expect(getByText('Bugün için planlanmış bir şey yok.')).toBeTruthy();
+  });
+
+  it('Bugün ekranı gün planı yüklenirken iskelet gösterir', async () => {
+    mockUseActiveCircle.mockReturnValue(loaded);
+    mockUseDayPlan.mockReturnValue({ ...emptyDayPlan, isLoading: true });
+
+    const { getByLabelText } = await renderScreen(BugunScreen);
+
+    expect(getByLabelText('Bugünün planı yükleniyor')).toBeTruthy();
+  });
+
+  it('Bugün ekranı çevrimdışıyken bekleyen sayısını gösterir', async () => {
+    mockUseActiveCircle.mockReturnValue(loaded);
+    mockUseDayPlan.mockReturnValue({ ...emptyDayPlan, isOnline: false, pendingCount: 2 });
+
+    const { getByText } = await renderScreen(BugunScreen);
+
+    expect(getByText(/2 değişiklik cihazında bekliyor/)).toBeTruthy();
   });
 });
