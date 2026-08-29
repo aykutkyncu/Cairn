@@ -45,7 +45,14 @@ comment on function public.storage_path_circle_id(text) is
   'Storage nesne yolunun ilk parçasını çember kimliği olarak çözer. Geçersiz '
   'biçimde null döner; null yetki vermez.';
 
-alter table storage.objects enable row level security;
+-- storage.objects üzerinde RLS Supabase tarafından zaten AÇIKTIR ve tablonun
+-- sahibi `supabase_storage_admin`'dir. Migration'ı çalıştıran rol tablonun
+-- sahibi olmadığı için `alter table ... enable row level security` burada
+-- "must be owner of table objects" (42501) hatası verir.
+--
+-- Bu satır bilinçli olarak KALDIRILDI. Politikalar aşağıda tanımlanır;
+-- RLS'in açık olduğu varsayımı `supabase/tests/` içindeki pgTAP paketinde
+-- ayrıca doğrulanır — sessiz bir varsayım bırakılmaz.
 
 -- Okuma: yalnız çember üyesi. Nesne yolu geçersizse (null) erişim reddedilir.
 create policy documents_read_circle_member on storage.objects

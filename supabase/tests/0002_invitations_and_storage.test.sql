@@ -4,7 +4,7 @@
 -- ÇALIŞTIRMA: supabase test db  (yerel Postgres gerektirir, Docker ile)
 
 begin;
-select plan(16);
+select plan(17);
 
 
 \set owner_a     '11111111-1111-1111-1111-111111111111'
@@ -114,6 +114,18 @@ select is(
   (select b.public from storage.buckets b where b.id = 'documents'),
   false,
   'documents bucket''ı private''tır'
+);
+
+-- 0008_storage.sql, storage.objects üzerinde RLS'i AÇMAZ: tablonun sahibi
+-- supabase_storage_admin'dir ve migration rolü onu değiştiremez (42501).
+-- Supabase'in RLS'i açık getirdiği varsayımı sessiz bırakılmaz; burada
+-- doğrulanır. Bu kontrol düşerse politikalarımız hiçbir şey korumuyor demektir.
+select ok(
+  (select c.relrowsecurity
+     from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'storage' and c.relname = 'objects'),
+  'storage.objects üzerinde RLS açıktır'
 );
 
 -- ---------------------------------------------------------------------------
