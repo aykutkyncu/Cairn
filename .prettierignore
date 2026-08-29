@@ -5,3 +5,7 @@ coverage/
 android/
 ios/
 package-lock.json
+
+# Üretilen dosya: içeriği `supabase gen types` belirler ve CI onu depodakiyle
+# birebir karşılaştırır. Biçimlendirmek bu karşılaştırmayı kırardı.
+src/lib/database.types.ts
