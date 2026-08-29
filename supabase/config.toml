@@ -29,7 +29,14 @@ file_size_limit = "15MiB"
 [auth]
 enabled = true
 site_url = "cairn://"
-additional_redirect_urls = ["cairn://", "http://localhost:8081"]
+# Uzak projedeki uri_allow_list ile aynı tutulur (supabase config push).
+# `cairn://auth/callback` magic-link dönüşü, `cairn://invite/*` davet bağlantısıdır.
+additional_redirect_urls = [
+  "cairn://",
+  "cairn://auth/callback",
+  "cairn://invite/*",
+  "http://localhost:8081",
+]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10

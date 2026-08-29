@@ -110,11 +110,19 @@ select ok(
   'B çemberinin sahibi A çemberinin Storage nesnesine erişemez'
 );
 
+-- Bucket kaydı `postgres` rolüyle okunur: storage.buckets üzerinde de RLS
+-- vardır ve `authenticated` rolünün select politikası yoktur. Bu beklenen
+-- davranıştır — istemci bucket listesini görmemelidir — fakat testin
+-- kendisi kaydın varlığını doğrulayabilmek için ayrıcalıklı role geçer.
+set local role postgres;
+
 select is(
   (select b.public from storage.buckets b where b.id = 'documents'),
   false,
   'documents bucket''ı private''tır'
 );
+
+set local role authenticated;
 
 -- 0008_storage.sql, storage.objects üzerinde RLS'i AÇMAZ: tablonun sahibi
 -- supabase_storage_admin'dir ve migration rolü onu değiştiremez (42501).

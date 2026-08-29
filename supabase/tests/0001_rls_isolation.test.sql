@@ -7,7 +7,7 @@
 -- iddialarının kanıtıdır. Kanıt çalıştırılmadan bu iddialar yapılmaz.
 
 begin;
-select plan(27);
+select plan(28);
 
 
 -- ---------------------------------------------------------------------------
