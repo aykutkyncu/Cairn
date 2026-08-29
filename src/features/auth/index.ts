@@ -9,6 +9,7 @@ export {
   type AuthErrorCode,
   type AuthResult,
 } from './auth-repository';
+export { NATIVE_AUTH_REDIRECT, WEB_FALLBACK_ORIGIN, authRedirectUrl } from './auth-redirect';
 export { resetAuthStore, useAuthStore, type AuthStatus, type AuthUser } from './auth-store';
 export { useAuthSession } from './use-auth-session';
 export {

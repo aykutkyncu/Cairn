@@ -15,6 +15,8 @@ const mockSendMagicLink = jest.fn();
 
 jest.mock('@/features/auth', () => ({
   sendMagicLink: (email: string, redirect: string) => mockSendMagicLink(email, redirect),
+  // Test ortamı native platform olarak koşar; dönüş adresi uygulama şemasıdır.
+  authRedirectUrl: () => 'cairn://auth/callback',
 }));
 
 const renderScreen = () =>
