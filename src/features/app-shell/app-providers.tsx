@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 
-import { registerSessionCleaner } from '@/features/auth';
+import { registerSessionCleaner, useAuthSession } from '@/features/auth';
 import { startNetworkWatcher } from '@/lib/network';
 import { clearQueryCache, createQueryClient } from '@/lib/query-client';
 import { ErrorBoundary, ThemeProvider } from '@/ui';
@@ -29,6 +29,10 @@ export type AppProvidersProps = {
 };
 
 export function AppProviders({ children, queryClient, onGoHome }: AppProvidersProps) {
+  // Oturum durumunu Supabase ile eşitler. Bu çağrı olmadan uygulama açılış
+  // ekranında `loading` durumunda sonsuza kadar bekler.
+  useAuthSession();
+
   // İstemci bir kez oluşturulur ve bileşenin ömrü boyunca aynı kalır; bu
   // yüzden temizleyici doğrudan onu kapatabilir, ref'e gerek yoktur.
   const [client] = useState<QueryClient>(() => queryClient ?? createQueryClient());
