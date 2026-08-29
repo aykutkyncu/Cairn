@@ -1,11 +1,11 @@
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 
-import { ThemeProvider } from '@/ui';
+import { AppProviders } from '@/features/app-shell';
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
+    <AppProviders onGoHome={() => router.replace('/')}>
       <Stack screenOptions={{ headerShown: false }} />
-    </ThemeProvider>
+    </AppProviders>
   );
 }

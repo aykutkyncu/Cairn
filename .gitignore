@@ -52,3 +52,6 @@ coverage/
 
 # gitleaks raporu
 gitleaks-report.json
+
+# editör/IDE ayarları (kişiye özel; .vscode paylaşılan ayarlarla izlenir)
+.idea/

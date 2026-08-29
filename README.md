@@ -49,6 +49,8 @@ npm start
 ```
 src/app/         Expo Router rotaları - yalnız görsel düzenleyici
 src/features/    Alan bazlı iş mantığı, hook ve repository katmanı
+src/features/app-shell/  Sağlayıcı ağacı, ağ durumu, hata raporlama bağlantısı
+src/features/circles/    Çember üyeliği, aktif çember, roller
 src/lib/         Alan bağımsız altyapı (logger, istemciler, yardımcılar)
 src/ui/          Paylaşılan tasarım sistemi: tema tokenları + 13 erişilebilir bileşen
 src/constants/   Sabitler ve yapılandırma değerleri
@@ -138,12 +140,42 @@ Faz 00 kapsamında kod tarafı tamamdır, fakat aşağıdakiler depo sahibinin m
 - `npm audit` 11 orta seviye bulgu raporlamaktadır (transitive bağımlılıklar); CI kapısı
   `high` seviyesindedir, bu nedenle bu bulgular merge'ü engellemez.
 
+Faz 04 ile eklenenler:
+
+- **Hata raporlayıcı (Sentry vb.) kurulmamıştır.** Gerçek bir DSN, hesap ve ücret
+  değerlendirmesi gerektirir. `src/lib/error-reporting.ts` içindeki temizleyiciler bir
+  raporlayıcı eklendiğinde `beforeSend`/`beforeBreadcrumb` kancalarına bağlanmak üzere saf
+  fonksiyon olarak yazılmış ve birim testleriyle sınanmıştır. Faz 04'ün "örnek Sentry olayı
+  hasta adı, ilaç, not veya request body içermez" kriteri bu testlerle kanıtlanmıştır;
+  **gerçek bir Sentry olayı hiç üretilmemiştir.**
+- **Çevrimdışı şerit gerçek cihazda denenmemiştir.** `toNetworkStatus` mantığı birim
+  testleriyle sabitlenmiştir, fakat uçak modu, portal arkasındaki Wi-Fi ve sinyalsiz
+  hücresel gibi gerçek durumlar cihazda görülmemiştir.
+- **Sekme iskeleti boş durumdadır.** Bugün, Takvim, Dosya ve Daha fazlası sekmeleri
+  loading/empty/error/offline durumlarını ele alır, fakat içerikleri Faz 05 ve sonrasında
+  gelir. Var olmayan bir özellik varmış gibi gösterilmemiştir.
+- **Çember listesi gerçek sunucuya karşı çalıştırılmamıştır.** `listCircles` sorgusu ve
+  Zod şeması yazılmış, fakat Supabase projesi bağlı olmadığı için gerçek bir yanıtla
+  denenmemiştir.
+- Expo Router'ın tipli rota tanımları (`.expo/types/router.d.ts`) `npx expo start`
+  çalıştırıldığında üretilir ve Git'e girmez. Yerel `npm run typecheck` bu dosya eskiyse
+  var olan bir rotayı hatalı gösterebilir; en az bir kez `npx expo start` çalıştırmak
+  gerekir.
+
 ## Fazlar
 
 Geliştirme, `Cairn_Claude_Code_Uygulama_Kilavuzu.pdf` içindeki 17 fazlı sırayı izler.
 Bir fazın kabul kriterleri kanıtlanmadan sonraki faza geçilmez.
 
-| Faz                                          | Durum                                 |
-| -------------------------------------------- | ------------------------------------- |
-| 00 - Zemin: repo, araçlar ve kalite kapıları | Kod tarafı tamam, manuel adımlar açık |
-| 01-16                                        | Başlanmadı                            |
+| Faz                                            | Durum                                 |
+| ---------------------------------------------- | ------------------------------------- |
+| 00 - Zemin: repo, araçlar ve kalite kapıları   | Kod tarafı tamam, manuel adımlar açık |
+| 01 - Erişilebilir tasarım sistemi              | Kod tarafı tamam, gözle denetim açık  |
+| 02 - Veri modeli, RLS ve gizlilik temeli       | Kod tarafı tamam, pgTAP koşusu açık   |
+| 03 - Kimlik doğrulama ve atomik çember daveti  | Kod tarafı tamam, gerçek akış açık    |
+| 04 - Uygulama iskeleti ve güvenli veri katmanı | Kod tarafı tamam, cihaz testi açık    |
+| 05-16                                          | Başlanmadı                            |
+
+"Kod tarafı tamam" demek, o fazın kabul kriterlerinin **tamamı kanıtlandı** demek değildir.
+Her fazın kanıtlanmamış kalan adımları yukarıdaki "Bilinen eksikler" bölümünde tek tek
+yazılıdır.
