@@ -10,6 +10,7 @@ export {
   type AuthResult,
 } from './auth-repository';
 export { resetAuthStore, useAuthStore, type AuthStatus, type AuthUser } from './auth-store';
+export { useAuthSession } from './use-auth-session';
 export {
   TOKEN_HASH_BYTE_LENGTH,
   generateInvitationToken,
