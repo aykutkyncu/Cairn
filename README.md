@@ -156,7 +156,11 @@ Faz 04 ile eklenenler:
   gelir. Var olmayan bir özellik varmış gibi gösterilmemiştir.
 - **Çember listesi gerçek sunucuya karşı çalıştırılmamıştır.** `listCircles` sorgusu ve
   Zod şeması yazılmış, fakat Supabase projesi bağlı olmadığı için gerçek bir yanıtla
-  denenmemiştir.
+  denenmemiştir. Repository sınırı taklit edilmiş bir istemciyle test edilmiştir.
+- Test kapsamı %84.7 (satır %85.6). Kapsanmayan başlıca yerler: `src/lib/supabase.ts`
+  istemci kurulumu (gerçek Supabase yapılandırması gerektirir), `src/app/_layout.tsx` ve
+  `(tabs)/_layout.tsx` gibi Expo Router düzen dosyaları (yönlendirici çalışmadan
+  render edilemez).
 - Expo Router'ın tipli rota tanımları (`.expo/types/router.d.ts`) `npx expo start`
   çalıştırıldığında üretilir ve Git'e girmez. Yerel `npm run typecheck` bu dosya eskiyse
   var olan bir rotayı hatalı gösterebilir; en az bir kez `npx expo start` çalıştırmak

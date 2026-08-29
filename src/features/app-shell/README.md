@@ -5,14 +5,21 @@ Uygulamanın çevresi: sağlayıcı ağacı, ağ durumu ve hata sınırının ra
 ## Sağlayıcı sırası
 
 ```
-ErrorBoundary
-  └── ThemeProvider
+ThemeProvider
+  └── ErrorBoundary
         └── QueryClientProvider
               └── uygulama
 ```
 
-Hata sınırı en dıştadır ki bir sağlayıcının kurulumunda oluşan hata da yakalansın. Tema
-sınırın **içindedir**, böylece hata ekranı da kullanıcının seçtiği temada görünür.
+**Tema en dıştadır, hata sınırı onun içindedir.** Hata ekranının kendisi tasarım sistemini
+kullanır; sınır temanın dışında olsaydı bir render hatasında yedek ekran da `useTheme`
+çağırırken patlar ve kullanıcı hata ekranı yerine boş bir ekran görürdü. (Bu sıra önce ters
+kurulmuştu; `app-providers.test.tsx` içindeki "render hatasını yakalar" testi kusuru
+ortaya çıkardı.)
+
+Bedeli, `ThemeProvider`'ın kendi kurulumunda oluşacak bir hatanın yakalanamamasıdır. Bu
+kabul edilmiş bir sınırdır: tema sağlayıcısı yalnız bir context ve renk tablosu kurar; ağ
+veya depolama işi yapmaz.
 
 ## Sorgu önbelleği ve oturum
 

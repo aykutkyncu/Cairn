@@ -11,9 +11,14 @@ import { reportBoundaryError } from './report-boundary-error';
 /**
  * Uygulamanın sağlayıcı ağacı.
  *
- * Sıra bilinçlidir: hata sınırı EN DIŞTADIR, böylece bir sağlayıcının
- * kurulumunda oluşan hata da yakalanır. Tema sınırın içindedir ki hata
- * ekranı da doğru temada görünsün.
+ * Sıra bilinçlidir: **tema en dıştadır, hata sınırı onun içindedir.**
+ * Hata ekranının kendisi tasarım sistemini (dolayısıyla tema tokenlarını)
+ * kullanır; sınır temanın dışında olsaydı, bir render hatasında yedek ekran
+ * da patlar ve kullanıcı hata ekranı yerine boş bir ekran görürdü.
+ *
+ * Bunun bedeli, `ThemeProvider`'ın KENDİ kurulumunda oluşacak bir hatanın
+ * yakalanamamasıdır. Bu kabul edilmiş bir sınırdır: tema sağlayıcısı yalnız
+ * bir context ve renk tablosu kurar, ağ veya depolama işi yapmaz.
  */
 
 export type AppProvidersProps = {
@@ -42,10 +47,13 @@ export function AppProviders({ children, queryClient, onGoHome }: AppProvidersPr
   }, [client]);
 
   return (
-    <ErrorBoundary onError={reportBoundaryError} {...(onGoHome === undefined ? {} : { onGoHome })}>
-      <ThemeProvider>
+    <ThemeProvider>
+      <ErrorBoundary
+        onError={reportBoundaryError}
+        {...(onGoHome === undefined ? {} : { onGoHome })}
+      >
         <QueryClientProvider client={client}>{children}</QueryClientProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </ThemeProvider>
   );
 }
