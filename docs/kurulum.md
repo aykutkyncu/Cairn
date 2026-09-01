@@ -166,12 +166,65 @@ Uygulama bugüne kadar **hiçbir cihazda çalışmadı**. Bu adım, testlerin ya
 
 ### C1. Başlat
 
+İki yol var. **Expo Go** hızlıdır ama `cairn://` derin bağlantılarını çalıştıramaz; magic-link
+ve davet bağlantısı ancak **geliştirme derlemesiyle** denenebilir.
+
+**Yol 1 — Expo Go (hızlı, kurulum yok):**
+
 ```
 npx expo start
 ```
 
-Telefonuna **Expo Go** kur (Play Store, ücretsiz), QR kodu okut. Telefon ve bilgisayar aynı
-Wi-Fi ağında olmalı.
+Telefonuna Expo Go kur (Play Store, ücretsiz), QR kodu okut. Telefon ve bilgisayar aynı
+Wi-Fi ağında olmalı. Bu yolda giriş akışı denenemez: e-postadaki `cairn://auth/callback`
+bağlantısını Expo Go karşılamaz.
+
+**Yol 2 — yerel Android derlemesi (EAS gerekmez, ücretsiz):**
+
+Gereken her şey bu makinede kurulu: Android SDK, Android Studio JDK ve `Pixel_6` emülatörü.
+
+```bash
+export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"
+export ANDROID_HOME="$LOCALAPPDATA/Android/Sdk"
+export PATH="$JAVA_HOME/bin:$PATH"
+
+npx expo prebuild --platform android --no-install   # android/ klasörünü üretir (Git'e girmez)
+cd android && ./gradlew assembleDebug               # APK: android/app/build/outputs/apk/debug/
+```
+
+Kurulum ve çalıştırma:
+
+```bash
+"$ANDROID_HOME/emulator/emulator.exe" -avd Pixel_6 &      # ya da telefonu USB ile bağla
+"$ANDROID_HOME/platform-tools/adb.exe" install -r android/app/build/outputs/apk/debug/app-debug.apk
+npx expo start --dev-client                                # JS paketini servis eder
+```
+
+`android/` klasörü `.gitignore`'dadır: yerel proje her `prebuild` ile `app.json`'dan yeniden
+üretilir, elle düzenlenmez.
+
+**Bu makinede çalışması için gereken üç şey** (üçü de bir kez yapıldı, tekrar gerekmez):
+
+1. **JDK 17.** Android Studio'nun kendi JDK'sı 25 sürümünde ve `react-native-screens` ile
+   `react-native-worklets`'in CMake adımı o sürümde çöküyor. Gradle'ın indirdiği Adoptium 17
+   kullanılır: `~/.gradle/jdks/eclipse_adoptium-17-amd64-windows.2`.
+2. **NDK 27 sabitlemesi.** Makinede iki NDK var (27.1 ve 28.2); ikisinin libc++ isim uzayı
+   farklı ve karışınca bağlama çöküyor. `app.json` içindeki `expo-build-properties`
+   eklentisi sürümü `27.1.12297006`'ya sabitler.
+3. **Boşluksuz NDK yolu.** Google'ın NDK'sı Windows'ta boşluk içeren yolları desteklemez;
+   kullanıcı adında boşluk olduğu için CMake C++ derleyicisini çözemiyor ve
+   `undefined symbol: operator new` benzeri bağlama hataları veriyordu. NDK
+   `C:\Android
+dk.1.12297006` altına kopyalandı ve `android/local.properties`
+   içine şu satır yazıldı (dosya Git'e girmez, `prebuild` sonrası tekrar yazılmalıdır):
+
+   ```
+   ndk.dir=C:/Android/ndk/27.1.12297006
+   ```
+
+**Supabase ayarı (zorunlu):** `Authentication → URL Configuration → Redirect URLs` listesine
+`cairn://auth/callback` eklenmelidir. Listede olmayan adrese yönlendirme sessizce site_url'e
+düşer ve giriş tamamlanmaz.
 
 ### C2. Sırayla dene
 

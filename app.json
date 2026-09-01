@@ -8,7 +8,8 @@
     "scheme": "cairn",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.cairn.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +18,9 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": ["android.permission.RECORD_AUDIO"],
+      "package": "com.cairn.app"
     },
     "web": {
       "output": "static",
@@ -34,7 +37,22 @@
         }
       ],
       "expo-secure-store",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cairn, seçtiğin reçete veya tahlil fotoğrafını çemberinle paylaşmak için galerine erişir. Yalnız senin seçtiğin dosyalar yüklenir.",
+          "cameraPermission": "Cairn, belge fotoğrafı çekmen için kamerayı kullanır. Fotoğraf yalnız sen yükle dediğinde gönderilir."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "ndkVersion": "27.1.12297006"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
