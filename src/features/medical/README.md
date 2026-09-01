@@ -2,11 +2,15 @@
 
 Tıbbi dosya: ilaçlar, alerjiler, teşhisler, doktorlar, ölçümler ve notlar.
 
-> Faz 06 durumu (1/n): ilaç ve sağlık kaydı okuma/yazma, Dosya ekranı, rol
-> davranışı ve ilaçtan göreve açık onaylı geçiş tamamlandı. **Henüz yok:**
-> belge yükleme ve imzalı URL görüntüleme, OCR, not geçmişi ve randevu öncesi
-> soru listesi, arama arayüzü (repository hazır, ekran yok), kayıt düzenleme
-> ve silme.
+> Faz 06 durumu (2/n): ilaç ve sağlık kaydı okuma/yazma, Dosya ekranı, rol
+> davranışı, ilaçtan göreve açık onaylı geçiş, notlar ve randevu soruları,
+> çakışma korumalı düzenleme ve arama ekranı tamamlandı. **Henüz yok:** belge
+> yükleme ve imzalı URL görüntüleme, OCR, kayıt silme, not yazarının adı
+> (profil sorgusu yazılmadı; uydurmak yerine yalnız tarih gösterilir).
+>
+> İlaç oluşturma ve listeleme **gerçek Supabase'e karşı bir kez çalıştırıldı**
+> (depo sahibi, web hedefinde). Diğer akışlar yalnız birim testleriyle
+> kanıtlıdır.
 
 ## Buradaki her metin sağlık verisidir
 
@@ -52,6 +56,28 @@ bakım verenin gerçekliğinden uzaklaştırırdı.
 
 Gövde metnine **genel amaçlı temizleme uygulanmaz** (sözleşme maddesi). Metin
 ham saklanır ve çıktı tarafında HTML olarak işlenmez.
+
+## Düzenlemede sessiz son-yazan-kazan yoktur
+
+Sözleşme sağlık metninde sessiz üzerine yazmayı yasaklar. `updateHealthRecord`
+bu yüzden `revision = baseRevision` koşuluyla yazar: `baseRevision`,
+kullanıcının düzenlemeye başlarken okuduğu sürümdür. Aradan başka biri
+yazdıysa koşul tutmaz, hiçbir satır güncellenmez ve `conflict` döner. Ekran
+bunu **kullanıcıya gösterir** ve yazdığını "gönderildi" saymaz.
+
+`revision` ve `updated_at` istemciden gönderilmez; ikisini de sunucu
+trigger'ı yazar (`0001_foundation.sql`). İstemcinin sürüm numarasına güvenmek,
+çakışma denetimini istemcinin eline bırakmak olurdu.
+
+Not kartındaki "düzenlendi" etiketi `revision > 1` demektir: okuyan kişi,
+metnin ilk hali olmadığını bilmelidir.
+
+## Sağlık verisi rota parametresine yazılmaz
+
+Düzenleme ekranı kaydı **yalnız kimliğiyle** alır ve metni sunucudan okur.
+Başlık ve gövdeyi parametreyle taşımak, sağlık verisini URL'ye yazmak olurdu —
+sözleşmenin açık yasağı. Aynı nedenle arama sorgusu da rotaya değil, yalnız
+bileşen durumuna yazılır.
 
 ## Arama sunucuya gider
 

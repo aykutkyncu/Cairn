@@ -2,9 +2,11 @@ import {
   MedicalError,
   createHealthRecord,
   createMedication,
+  getHealthRecord,
   listHealthRecords,
   listMedications,
   searchHealthRecords,
+  updateHealthRecord,
 } from '../medical-repository';
 
 /**
@@ -22,6 +24,9 @@ const mockIsConfigured = jest.fn(() => true);
 const mockSelectResult = jest.fn();
 const mockInsertResult = jest.fn();
 const mockInsertSpy = jest.fn();
+const mockUpdateResult = jest.fn();
+const mockUpdateSpy = jest.fn();
+const mockEqSpy = jest.fn();
 const mockFromSpy = jest.fn();
 const mockIlikeSpy = jest.fn();
 const mockInSpy = jest.fn();
@@ -32,7 +37,10 @@ const makeQuery = (result: () => unknown) => {
   const chain = () => query;
 
   query.select = chain;
-  query.eq = chain;
+  query.eq = (column: string, value: unknown) => {
+    mockEqSpy(column, value);
+    return query;
+  };
   query.is = chain;
   query.order = chain;
   query.limit = chain;
@@ -61,6 +69,10 @@ jest.mock('@/lib/supabase', () => ({
         insert: (payload: unknown) => {
           mockInsertSpy(payload);
           return { select: () => makeQuery(() => mockInsertResult()) };
+        },
+        update: (payload: unknown) => {
+          mockUpdateSpy(payload);
+          return makeQuery(() => mockUpdateResult());
         },
       };
     },
@@ -230,6 +242,69 @@ describe('medical-repository', () => {
 
       expect(mockLogInfo).toHaveBeenCalledWith('medication_created', undefined);
       expect(JSON.stringify(mockLogInfo.mock.calls)).not.toContain('Metformin');
+    });
+  });
+
+  describe('getHealthRecord', () => {
+    it('kaydı kimliğiyle getirir', async () => {
+      mockSelectResult.mockReturnValue({ data: [recordRow], error: null });
+
+      const found = await getHealthRecord(RECORD_ID);
+
+      expect(found?.id).toBe(RECORD_ID);
+      expect(mockEqSpy).toHaveBeenCalledWith('id', RECORD_ID);
+    });
+
+    it('kayıt yoksa null döner', async () => {
+      // Silinmiş mi, erişim mi yok — ayırt etmek bilgi sızdırırdı.
+      mockSelectResult.mockReturnValue({ data: [], error: null });
+
+      await expect(getHealthRecord(RECORD_ID)).resolves.toBeNull();
+    });
+  });
+
+  describe('updateHealthRecord', () => {
+    const update = {
+      id: RECORD_ID,
+      baseRevision: 2,
+      title: 'Yeni başlık',
+      body: 'Yeni gövde',
+      recordedOn: null,
+    };
+
+    it('güncellemeyi okunan sürüm koşuluyla yapar', async () => {
+      mockUpdateResult.mockReturnValue({ data: [{ ...recordRow, revision: 3 }], error: null });
+
+      const updated = await updateHealthRecord(update);
+
+      expect(updated.id).toBe(RECORD_ID);
+      // Çakışma denetimi burada: sunucudaki sürüm farklıysa koşul tutmaz.
+      expect(mockEqSpy).toHaveBeenCalledWith('revision', 2);
+    });
+
+    it('revision ve updated_at göndermez', async () => {
+      // İkisini de sunucu trigger'ı yazar; istemcinin göndermesi çakışma
+      // denetimini istemcinin eline bırakmak olurdu.
+      mockUpdateResult.mockReturnValue({ data: [recordRow], error: null });
+
+      await updateHealthRecord(update);
+
+      const payload = mockUpdateSpy.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(Object.keys(payload).sort()).toEqual(['body', 'recorded_on', 'title']);
+    });
+
+    it('hiçbir satır güncellenmediyse çakışma bildirir', async () => {
+      // Sessiz son-yazan-kazan sağlık metninde yasaktır.
+      mockUpdateResult.mockReturnValue({ data: [], error: null });
+
+      await expect(updateHealthRecord(update)).rejects.toMatchObject({ code: 'conflict' });
+    });
+
+    it('çakışma log satırına metin yazmaz', async () => {
+      mockUpdateResult.mockReturnValue({ data: [], error: null });
+
+      await expect(updateHealthRecord(update)).rejects.toBeInstanceOf(MedicalError);
+      expect(JSON.stringify(mockLogInfo.mock.calls)).not.toContain('Yeni gövde');
     });
   });
 

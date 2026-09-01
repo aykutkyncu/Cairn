@@ -53,6 +53,8 @@ const renderView = (props: Partial<Parameters<typeof MedicalFileView>[0]> = {}) 
         canWrite
         onAddMedication={jest.fn()}
         onAddRecord={jest.fn()}
+        onOpenNotes={jest.fn()}
+        onOpenSearch={jest.fn()}
         {...props}
       />
     </ThemeProvider>,

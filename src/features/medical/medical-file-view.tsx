@@ -24,6 +24,8 @@ export type MedicalFileViewProps = {
   readonly canWrite: boolean;
   readonly onAddMedication: () => void;
   readonly onAddRecord: (type: HealthRecordType) => void;
+  readonly onOpenNotes: () => void;
+  readonly onOpenSearch: () => void;
 };
 
 /** Dosyada gösterilen kayıt türleri ve sırası. */
@@ -36,6 +38,8 @@ export function MedicalFileView({
   canWrite,
   onAddMedication,
   onAddRecord,
+  onOpenNotes,
+  onOpenSearch,
 }: MedicalFileViewProps) {
   const theme = useTheme();
 
@@ -52,6 +56,15 @@ export function MedicalFileView({
         Buradaki bilgiler çemberdeki herkeste görünür. Cairn ilaç doğruluğunu denetlemez; kayıtlar
         hekimin söylediğinin yerine geçmez.
       </Text>
+
+      <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+        <View style={{ flex: 1 }}>
+          <Button variant="secondary" label="Notlar" onPress={onOpenNotes} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button variant="secondary" label="Dosyada ara" onPress={onOpenSearch} />
+        </View>
+      </View>
 
       <MedicationSection
         title="Kullandığı ilaçlar"

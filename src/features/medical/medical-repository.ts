@@ -27,7 +27,7 @@ import {
  */
 
 export type MedicalErrorCode =
-  'not_configured' | 'unauthenticated' | 'forbidden' | 'invalid_response' | 'network';
+  'not_configured' | 'unauthenticated' | 'forbidden' | 'invalid_response' | 'conflict' | 'network';
 
 /** Repository hatası. Serbest metin taşımaz; mesaj kodun kendisidir. */
 export class MedicalError extends Error {
@@ -242,6 +242,118 @@ export const createMedication = async (input: MedicationInput): Promise<Medicati
 
   logger.info('medication_created');
   return toMedication(created);
+};
+
+/**
+ * Tek bir sağlık kaydını getirir.
+ *
+ * Düzenleme ekranı kaydı KİMLİĞİYLE ister. Başlık ve gövdeyi rota
+ * parametresiyle taşımak, sağlık verisini URL'ye yazmak olurdu — sözleşme
+ * bunu yasaklar.
+ */
+export const getHealthRecord = async (id: string): Promise<HealthRecord | null> => {
+  if (!isSupabaseConfigured) throw new MedicalError('not_configured');
+
+  let response: { data: unknown; error: { code?: string } | null };
+  try {
+    response = await getSupabaseClient()
+      .from('health_records')
+      .select(HEALTH_RECORD_COLUMNS)
+      .eq('id', id)
+      .is('deleted_at', null);
+  } catch {
+    throw new MedicalError('network');
+  }
+
+  if (response.error !== null) {
+    logger.warn('get_health_record_failed', { code: response.error.code ?? '' });
+    throw toMedicalError(response.error);
+  }
+
+  const parsed = parseAtBoundary(
+    healthRecordListSchema,
+    'health_record_list',
+    'get_health_record',
+    response.data,
+  );
+  if (!parsed.ok) throw new MedicalError('invalid_response');
+
+  const row = parsed.data[0];
+  // Kayıt yok: silinmiş olabilir ya da bu çemberin üyesi değilsindir. İkisi
+  // de aynı sonucu verir; hangisi olduğunu söylemek bilgi sızdırırdı.
+  return row === undefined ? null : toHealthRecord(row);
+};
+
+/**
+ * Sağlık kaydı güncelleme girdisi.
+ *
+ * `baseRevision`, düzenlemeye başlarken okunan sürümdür. Sunucudaki sürüm
+ * bundan farklıysa yazma REDDEDİLİR.
+ */
+export type HealthRecordUpdate = {
+  readonly id: string;
+  readonly baseRevision: number;
+  readonly title: string;
+  readonly body: string | null;
+  readonly recordedOn: string | null;
+};
+
+/**
+ * Sağlık kaydını günceller.
+ *
+ * Sözleşme: **sessiz son-yazan-kazan, sağlık metninde yasaktır.** Bu yüzden
+ * güncelleme `revision = baseRevision` koşuluyla yapılır. Aradan başka biri
+ * yazdıysa koşul tutmaz, hiçbir satır güncellenmez ve `conflict` döner —
+ * çağıran taraf kullanıcıya durumu göstermek zorundadır.
+ *
+ * `revision` ve `updated_at` gönderilmez: ikisini de sunucu trigger'ı yazar.
+ * İstemcinin gönderdiği sürüm numarasına güvenmek, çakışma denetimini
+ * istemcinin eline bırakmak olurdu.
+ */
+export const updateHealthRecord = async (input: HealthRecordUpdate): Promise<HealthRecord> => {
+  if (!isSupabaseConfigured) throw new MedicalError('not_configured');
+
+  let response: { data: unknown; error: { code?: string } | null };
+  try {
+    response = await getSupabaseClient()
+      .from('health_records')
+      .update({
+        title: input.title,
+        body: input.body,
+        recorded_on: input.recordedOn,
+      })
+      .eq('id', input.id)
+      .eq('revision', input.baseRevision)
+      .is('deleted_at', null)
+      .select(HEALTH_RECORD_COLUMNS);
+  } catch {
+    throw new MedicalError('network');
+  }
+
+  if (response.error !== null) {
+    logger.warn('update_health_record_failed', { code: response.error.code ?? '' });
+    throw toMedicalError(response.error);
+  }
+
+  const parsed = parseAtBoundary(
+    healthRecordListSchema,
+    'health_record_list',
+    'update_health_record',
+    response.data,
+  );
+  if (!parsed.ok) throw new MedicalError('invalid_response');
+
+  const updated = parsed.data[0];
+  if (updated === undefined) {
+    // Boş sonuç iki şeyi birden anlatabilir: kayıt silinmiş ya da BAŞKASI
+    // güncellemiş. İkisinde de kullanıcının yazdığını sessizce üzerine
+    // yazmak yasaktır; çakışma olarak bildirilir.
+    logger.info('health_record_conflict');
+    throw new MedicalError('conflict');
+  }
+
+  logger.info('health_record_updated');
+  return toHealthRecord(updated);
 };
 
 /** Yeni sağlık kaydı. */

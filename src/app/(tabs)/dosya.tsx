@@ -64,6 +64,8 @@ function MedicalFileContainer({ circleId }: { readonly circleId: string }) {
         canWrite={activeCircle !== null && canWrite(activeCircle.role)}
         onAddMedication={() => router.push('/ilac-ekle')}
         onAddRecord={(type) => router.push({ pathname: '/kayit-ekle', params: { type } })}
+        onOpenNotes={() => router.push('/notlar')}
+        onOpenSearch={() => router.push('/ara')}
       />
     </ScrollView>
   );
