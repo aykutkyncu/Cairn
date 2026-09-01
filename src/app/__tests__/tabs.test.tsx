@@ -44,6 +44,21 @@ jest.mock('@/features/tasks', () => {
   return { ...actual, useDayPlan: () => mockUseDayPlan() };
 });
 
+// Dosya ekranı Faz 06'da gerçek veriye bağlandı. Aynı gerekçeyle sorgu
+// hook'ları taklit edilir; ekranın kendi davranışı
+// `features/medical/__tests__/medical-file-view.test.tsx` içinde sınanır.
+const mockUseMedications = jest.fn();
+const mockUseHealthRecords = jest.fn();
+
+jest.mock('@/features/medical', () => {
+  const actual = jest.requireActual('@/features/medical');
+  return {
+    ...actual,
+    useMedications: () => mockUseMedications(),
+    useHealthRecords: () => mockUseHealthRecords(),
+  };
+});
+
 const circle = {
   id: 'c-1',
   careRecipientName: 'Fatma Demir',
@@ -51,6 +66,9 @@ const circle = {
   defaultCurrency: 'TRY',
   role: 'caregiver' as const,
 };
+
+/** Yüklenmiş ve boş bir TanStack Query sonucu. */
+const emptyQuery = { data: [], isLoading: false, isError: false, refetch: jest.fn() };
 
 const loaded = { activeCircle: circle, circles: [circle], isLoading: false, isError: false };
 const loading = { activeCircle: null, circles: [], isLoading: true, isError: false };
@@ -93,6 +111,8 @@ describe('sekme ekranları', () => {
     mockUseActiveCircle.mockReset();
     mockUseDayPlan.mockReset();
     mockUseDayPlan.mockReturnValue(emptyDayPlan);
+    mockUseMedications.mockReturnValue(emptyQuery);
+    mockUseHealthRecords.mockReturnValue(emptyQuery);
   });
 
   it.each(screens)('%s başlığını erişilebilir başlık olarak gösterir', async (title, Screen) => {

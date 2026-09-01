@@ -1,0 +1,102 @@
+# src/features/medical
+
+Tıbbi dosya: ilaçlar, alerjiler, teşhisler, doktorlar, ölçümler ve notlar.
+
+> Faz 06 durumu (2/n): ilaç ve sağlık kaydı okuma/yazma, Dosya ekranı, rol
+> davranışı, ilaçtan göreve açık onaylı geçiş, notlar ve randevu soruları,
+> çakışma korumalı düzenleme ve arama ekranı tamamlandı. **Henüz yok:** belge
+> yükleme ve imzalı URL görüntüleme, OCR, kayıt silme, not yazarının adı
+> (profil sorgusu yazılmadı; uydurmak yerine yalnız tarih gösterilir).
+>
+> İlaç oluşturma ve listeleme **gerçek Supabase'e karşı bir kez çalıştırıldı**
+> (depo sahibi, web hedefinde). Diğer akışlar yalnız birim testleriyle
+> kanıtlıdır.
+
+## Buradaki her metin sağlık verisidir
+
+İlaç adı, teşhis başlığı, not gövdesi ve **kullanıcının arama sorgusu** özel
+nitelikli kişisel veridir. Hiçbiri log'a, analytics'e, push bildirimine, hata
+kaydına veya URL'ye yazılmaz. Repository'deki log satırları yalnız işlem adını
+ve Postgres hata kodunu taşır; testler bunu sabitler
+(`__tests__/medical-repository.test.ts`).
+
+## Otomatik ilaç hatırlatması yoktur
+
+Sözleşmenin açık maddesi: bir ilaç kaydı **kendiliğinden görev üretmez**.
+`medicationTaskPrefill` hiçbir şey kaydetmez; yalnız görev formunun başlangıç
+başlığını hazırlar. Saat, tekrar ve kaydetme kararı kullanıcınındır.
+
+Akış şudur:
+
+```
+ilaç kaydedildi
+  → "Hatırlatma kurulmadı." (açık bilgi)
+  → kullanıcı isterse → görev formu ön dolgulu açılır
+  → saat/tekrar seçilir → kullanıcı kaydeder
+```
+
+Ön dolgu yalnız `title` ve `kind` taşır. Saat taşısaydı, form kullanıcı hiç
+dokunmadan kaydedilebilir görünürdü — bu, otomatik hatırlatmanın kılık
+değiştirmiş hali olurdu.
+
+## Aktif ilaç kararı
+
+`isActiveMedication`, bitiş günü **bugün ise ilacı hâlâ aktif sayar**. "Bugüne
+kadar" diyen bir reçetede son günü geçmişe atmak, bakım vereni o gün ilacı
+atlamaya yöneltirdi.
+
+Karşılaştırma **çemberin** gününe göredir, cihazın değil: İstanbul'daki ve
+Berlin'deki iki bakım veren aynı listeyi görmelidir.
+
+## Serbest metin kalıba zorlanmaz
+
+Doz ve sıklık serbest metindir. "500 mg", "yarım tablet", "gerektiğinde" hepsi
+geçerlidir. Doğrulama yalnız uzunluğa bakar; içeriği bir kalıba sokmak kaydı
+bakım verenin gerçekliğinden uzaklaştırırdı.
+
+Gövde metnine **genel amaçlı temizleme uygulanmaz** (sözleşme maddesi). Metin
+ham saklanır ve çıktı tarafında HTML olarak işlenmez.
+
+## Düzenlemede sessiz son-yazan-kazan yoktur
+
+Sözleşme sağlık metninde sessiz üzerine yazmayı yasaklar. `updateHealthRecord`
+bu yüzden `revision = baseRevision` koşuluyla yazar: `baseRevision`,
+kullanıcının düzenlemeye başlarken okuduğu sürümdür. Aradan başka biri
+yazdıysa koşul tutmaz, hiçbir satır güncellenmez ve `conflict` döner. Ekran
+bunu **kullanıcıya gösterir** ve yazdığını "gönderildi" saymaz.
+
+`revision` ve `updated_at` istemciden gönderilmez; ikisini de sunucu
+trigger'ı yazar (`0001_foundation.sql`). İstemcinin sürüm numarasına güvenmek,
+çakışma denetimini istemcinin eline bırakmak olurdu.
+
+Not kartındaki "düzenlendi" etiketi `revision > 1` demektir: okuyan kişi,
+metnin ilk hali olmadığını bilmelidir.
+
+## Sağlık verisi rota parametresine yazılmaz
+
+Düzenleme ekranı kaydı **yalnız kimliğiyle** alır ve metni sunucudan okur.
+Başlık ve gövdeyi parametreyle taşımak, sağlık verisini URL'ye yazmak olurdu —
+sözleşmenin açık yasağı. Aynı nedenle arama sorgusu da rotaya değil, yalnız
+bileşen durumuna yazılır.
+
+## Arama sunucuya gider
+
+`searchHealthRecords` sorguyu sunucuya gönderir; güvenlik RLS ve `circle_id`
+koşuluyla sağlanır. "Aramanız cihazınızdan çıkmıyor" demek yanlış bir gizlilik
+vaadi olurdu ve söylenmez.
+
+Arama metnindeki `%`, `_` ve `\` kaçırılır: kaçırılmazsa kullanıcının yazdığı
+düz metin PostgREST `ilike` kalıbında joker olur ve yazmadığı satırlar dönerdi.
+İki harften kısa sorgu sunucuya hiç gitmez.
+
+## Rol davranışı
+
+`MedicalFileView` yazma yetkisi olmayan üyeye (viewer) ekleme düğmesi
+çizmez. **Bu bir güvenlik sınırı değildir** — yazma yetkisi RLS'tedir; buradaki
+amaç çalışmayacak bir düğme göstermemektir.
+
+## Önbellek kalıcı değildir
+
+Sunucu verisi TanStack Query önbelleğinde, yani bellekte yaşar; uygulama
+kapanınca gider. Çevrimdışı okuma Faz 07'nin şifreli yerel deposuna aittir.
+Burada uydurulmuş bir "çevrimdışı dosya" vaadi verilmez.
