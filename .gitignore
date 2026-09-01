@@ -58,3 +58,7 @@ gitleaks-report.json
 
 # Supabase CLI yerel durumu (bağlı proje referansı, geçici dosyalar)
 supabase/.temp/
+
+# Cairn: yerel not/parola dosyalari (asla izlenmez)
+supabase_sifre.txt
+*_sifre.txt

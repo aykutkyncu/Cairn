@@ -51,6 +51,7 @@ src/app/         Expo Router rotaları - yalnız görsel düzenleyici
 src/features/    Alan bazlı iş mantığı, hook ve repository katmanı
 src/features/app-shell/  Sağlayıcı ağacı, ağ durumu, hata raporlama bağlantısı
 src/features/circles/    Çember üyeliği, aktif çember, roller
+src/features/tasks/      Bakım takvimi: tekrar motoru, gün planı, tamamlama kuyruğu
 src/lib/         Alan bağımsız altyapı (logger, istemciler, yardımcılar)
 src/ui/          Paylaşılan tasarım sistemi: tema tokenları + 13 erişilebilir bileşen
 src/constants/   Sabitler ve yapılandırma değerleri
@@ -110,17 +111,22 @@ Bu tablo bugünkü durumdur, garanti değildir. Sağlayıcı fiyatlandırması d
 
 Faz 00 kapsamında kod tarafı tamamdır, fakat aşağıdakiler depo sahibinin manuel adımını gerektirir:
 
-- **Branch protection** GitHub'da etkinleştirilmemiştir; CI yeşil olmadan merge engellenmez.
-- Depo henüz bir GitHub remote'una bağlı değildir; CI iş akışı ilk push'ta çalışacaktır.
 - `gitleaks` yerel makinede kurulu değildir; çalışma ağacı taraması secretlint ile, git
   geçmişi taraması CI'daki `gitleaks-action` ile yapılır.
-- Uygulama fiziksel cihazda veya emülatörde çalıştırılıp doğrulanmamıştır. Faz 03'ün
-  magic-link akışı gerçek bir e-posta ile hiç denenmemiştir; Supabase projesi
-  bağlanmadan denenemez.
+- **Uygulama fiziksel cihazda veya emülatörde çalıştırılmamıştır.** Yalnız web hedefinde
+  (`npm run web`) açılmıştır; iOS/Android derlemesi hiç alınmamıştır.
+- **Magic-link akışı web'de çalışmıştır, native'de hiç denenmemiştir.** Gerçek bir e-posta
+  gönderilip bağlantıya tıklanmış, dönüş adresi kusuru (`cairn://` şemasının tarayıcıda
+  boş sayfa açması) bu denemede bulunup `authRedirectUrl()` ile düzeltilmiştir. Tarayıcıda
+  sonrasında açık bir oturum ve kurulmuş bir çember gözlenmiştir; **giriş anının kendisi
+  (bağlantıya tıklama → oturum) bir kez daha izlenmemiştir.** Native dönüş ekranı
+  (`src/app/auth/callback.tsx`) yalnız birim testleriyle kanıtlıdır: iOS/Android derlemesi
+  alınmadığı için `cairn://auth/callback` gerçek bir cihazda hiç açılmamıştır.
 - **Gerçek eşzamanlılık sınanmamıştır.** PGlite tek bağlantılıdır; "aynı davet iki
   eşzamanlı denemede yalnız bir kez kabul edilir" kriteri, kontrolün ve yazmanın tek bir
   `UPDATE` ifadesinde (satır kilidiyle) olmasıyla tasarlanmıştır, fakat çok bağlantılı
-  koşuyla kanıtlanmamıştır. Kanıt CI'daki pgTAP işine aittir.
+  koşuyla kanıtlanmamıştır. CI'daki pgTAP işi de tek oturumda koşar; iki gerçek
+  eşzamanlı bağlantıyla yarıştıran bir test henüz yazılmamıştır.
 - **Google/Apple ile giriş yoktur.** OAuth yapılandırması, izin ekranları, redirect
   allowlist'i ve fiziksel cihaz testi olmadan eklenmemiştir.
 - **Universal Links / App Links yapılandırılmamıştır.** Davet bağlantısı yalnız `cairn://`
@@ -128,15 +134,11 @@ Faz 00 kapsamında kod tarafı tamamdır, fakat aşağıdakiler depo sahibinin m
   doğrulanmış bir alan adı gerekir. Faz 01'in
   kitchen-sink ekranı iki temada ve en büyük sistem yazı boyutunda gözle denetlenmemiştir;
   otomatik kontrast denetimi bunun yerine geçmez.
-- **pgTAP paketi henüz çalıştırılmamıştır.** Yerel makinede Docker olmadığı için
-  `supabase test db` koşulamadı; CI'daki `database` işi bunu ilk push'ta
-  çalıştıracaktır. Bu arada `npm run verify:schema`, migration'ları gerçek bir
-  Postgres motorunda (PGlite/WASM) uygulayıp aynı davranışları 49 kontrolle
-  sınıyor. Supabase'in gerçek auth ve storage davranışı yine de yalnız pgTAP
-  koşusuyla kanıtlanır; buradaki auth/storage şemaları asgari taklittir.
-- `src/lib/database.types.ts` henüz yoktur. Elle yazmak yerine CI'ın şemadan
-  üretmesi tercih edildi; ilk CI koşusundan sonra artifact olarak indirilip
-  depoya eklenmelidir.
+- **pgTAP yerel makinede koşulamaz.** Docker kurulu olmadığı için `supabase test db`
+  yalnız CI'daki "Veritabanı ve RLS testleri" işinde çalışır (main'de yeşildir).
+  Yerelde `npm run verify:schema`, migration'ları gerçek bir Postgres motorunda
+  (PGlite/WASM) uygulayıp aynı davranışları 49 kontrolle sınar; ancak Supabase'in
+  gerçek auth/storage davranışı yalnız pgTAP koşusuyla kanıtlanır.
 - `npm audit` 11 orta seviye bulgu raporlamaktadır (transitive bağımlılıklar); CI kapısı
   `high` seviyesindedir, bu nedenle bu bulgular merge'ü engellemez.
 
@@ -151,20 +153,41 @@ Faz 04 ile eklenenler:
 - **Çevrimdışı şerit gerçek cihazda denenmemiştir.** `toNetworkStatus` mantığı birim
   testleriyle sabitlenmiştir, fakat uçak modu, portal arkasındaki Wi-Fi ve sinyalsiz
   hücresel gibi gerçek durumlar cihazda görülmemiştir.
-- **Sekme iskeleti boş durumdadır.** Bugün, Takvim, Dosya ve Daha fazlası sekmeleri
-  loading/empty/error/offline durumlarını ele alır, fakat içerikleri Faz 05 ve sonrasında
-  gelir. Var olmayan bir özellik varmış gibi gösterilmemiştir.
+- **Takvim, Dosya ve Daha fazlası sekmeleri boş durumdadır.** Bugün sekmesi Faz 05 ile
+  doldu; kalan sekmeler loading/empty/error/offline durumlarını ele alır, fakat içerikleri
+  Faz 06 ve sonrasında gelir. Var olmayan bir özellik varmış gibi gösterilmemiştir.
 - **Çember listesi gerçek sunucuya karşı çalıştırılmamıştır.** `listCircles` sorgusu ve
-  Zod şeması yazılmış, fakat Supabase projesi bağlı olmadığı için gerçek bir yanıtla
-  denenmemiştir. Repository sınırı taklit edilmiş bir istemciyle test edilmiştir.
-- Test kapsamı %84.7 (satır %85.6). Kapsanmayan başlıca yerler: `src/lib/supabase.ts`
-  istemci kurulumu (gerçek Supabase yapılandırması gerektirir), `src/app/_layout.tsx` ve
-  `(tabs)/_layout.tsx` gibi Expo Router düzen dosyaları (yönlendirici çalışmadan
-  render edilemez).
+  Zod şeması yazılmış, fakat gerçek bir yanıtla denenmemiştir. Repository sınırı taklit
+  edilmiş bir istemciyle test edilmiştir.
+- Test kapsamı %81.2 (satır %82.3), 356 test / 34 paket. Kapsanmayan başlıca yerler:
+  `src/lib/supabase.ts` istemci kurulumu (gerçek Supabase yapılandırması gerektirir),
+  `src/app/_layout.tsx` ve `(tabs)/_layout.tsx` gibi Expo Router düzen dosyaları
+  (yönlendirici çalışmadan render edilemez).
 - Expo Router'ın tipli rota tanımları (`.expo/types/router.d.ts`) `npx expo start`
   çalıştırıldığında üretilir ve Git'e girmez. Yerel `npm run typecheck` bu dosya eskiyse
   var olan bir rotayı hatalı gösterebilir; en az bir kez `npx expo start` çalıştırmak
   gerekir.
+
+Faz 05 ile eklenenler:
+
+- **Tamamlama akışı gerçek sunucuya karşı çalıştırılmamıştır.** Kuyruk, idempotanslık ve
+  `23505` (zaten kaydedilmiş) davranışı taklit edilmiş bir istemciyle test edilmiştir;
+  `task_completions` tablosuna gerçek bir satır hiç yazılmamıştır.
+- **"İki cihazda eşzamanlı tamamlama tek kayıt üretir" kriteri kanıtlanmamıştır.** Aynı
+  `(task_id, occurrence_id)` için tekillik migration'da tanımlıdır ve istemci tarafı
+  çakışmayı hata saymaz, fakat iki gerçek cihazla koşulmamıştır.
+- **"Uçak modunda kalıcı kuyruk" kriteri yalnız birim testiyle kanıtlıdır.** SecureStore
+  taklit edilerek yeniden açılış sınanmıştır; gerçek cihazda uçak modu denenmemiştir.
+  Web'de kuyruk zaten kalıcı değildir (`not_persistent`).
+- **Sıkışan kayıtlar için arayüz yoktur.** 8 denemeyi aşan kayıt kuyrukta kalır ve
+  `listStuck()` ile okunabilir, fakat kullanıcıya gösterilmez.
+- **Takvim (ay) görünümü, görev düzenleme/silme ve atama arayüzü yoktur.** Görev yalnız
+  oluşturulabilir; düzenleme Faz 06 ve sonrasına bırakılmıştır.
+- DST kararları (ileri atlamada ilk gerçek ana çekme, geri atlamada ilk geçişi kabul)
+  birim testleriyle sabittir; gerçek bir DST gecesinde cihazda görülmemiştir.
+- **Sekme çubuğu ikonları web'de yer tutucu görünür.** İkon seti native sembollere
+  dayanır; web hedefinde küçük üçgenler çizilir. Sekme adları metin olarak yazılıdır,
+  bu yüzden anlam kaybı yoktur; düzeltme native ikon/sembol işidir.
 
 ## Fazlar
 
@@ -178,7 +201,8 @@ Bir fazın kabul kriterleri kanıtlanmadan sonraki faza geçilmez.
 | 02 - Veri modeli, RLS ve gizlilik temeli       | Kod tarafı tamam, pgTAP koşusu açık   |
 | 03 - Kimlik doğrulama ve atomik çember daveti  | Kod tarafı tamam, gerçek akış açık    |
 | 04 - Uygulama iskeleti ve güvenli veri katmanı | Kod tarafı tamam, cihaz testi açık    |
-| 05-16                                          | Başlanmadı                            |
+| 05 - Bakım takvimi (ürünün kalbi)              | Kod tarafı tamam, cihaz testi açık    |
+| 06-16                                          | Başlanmadı                            |
 
 "Kod tarafı tamam" demek, o fazın kabul kriterlerinin **tamamı kanıtlandı** demek değildir.
 Her fazın kanıtlanmamış kalan adımları yukarıdaki "Bilinen eksikler" bölümünde tek tek

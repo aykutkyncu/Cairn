@@ -1,11 +1,9 @@
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { useActiveCircle } from '@/features/circles';
+import { CircleGate, useActiveCircle } from '@/features/circles';
 import { DayPlanView, useDayPlan } from '@/features/tasks';
 import { ErrorState, OfflineBanner, Skeleton, useTheme } from '@/ui';
-
-import { CircleGate } from './_circle-gate';
 
 /**
  * Bugün sekmesi.

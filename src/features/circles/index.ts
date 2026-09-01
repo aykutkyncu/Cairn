@@ -13,5 +13,6 @@ export {
   type CircleSummary,
   type CircleSummaryRow,
 } from './circle-schema';
+export { CircleGate, type CircleGateProps } from './circle-gate';
 export { CircleSwitcher } from './circle-switcher';
 export { circleKeys, useActiveCircle, useCircles } from './use-circles';

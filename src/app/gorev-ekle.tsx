@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { useActiveCircle } from '@/features/circles';
+import { CircleGate, useActiveCircle } from '@/features/circles';
 import {
   describeRecurrence,
   rruleForPreset,
@@ -15,8 +15,6 @@ import {
   type TaskKind,
 } from '@/features/tasks';
 import { Button, Card, Input, MIN_TOUCH_TARGET, Text, useTheme } from '@/ui';
-
-import { CircleGate } from './(tabs)/_circle-gate';
 
 /**
  * Görev oluşturma ekranı.

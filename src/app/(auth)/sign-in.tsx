@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { sendMagicLink, type AuthErrorCode } from '@/features/auth';
+import { authRedirectUrl, sendMagicLink, type AuthErrorCode } from '@/features/auth';
 import { Button, Card, Input, Text, useTheme } from '@/ui';
 
 /**
@@ -15,9 +15,6 @@ import { Button, Card, Input, Text, useTheme } from '@/ui';
  * gerçek test gerektirir; bunlar sağlanmadan düğme göstermek çalışmayan bir
  * akış vaat etmek olur.
  */
-
-/** Derin bağlantı şeması app.json içindeki `scheme` ile eşleşir. */
-const AUTH_REDIRECT = 'cairn://auth/callback';
 
 const ERROR_MESSAGES: Readonly<Record<AuthErrorCode, string>> = {
   not_configured: 'Uygulama henüz sunucuya bağlı değil. Bu bir kurulum adımı.',
@@ -49,7 +46,9 @@ export default function SignInScreen() {
 
   const handleSubmit = async (): Promise<void> => {
     setState({ kind: 'sending' });
-    const result = await sendMagicLink(email.trim(), AUTH_REDIRECT);
+    // Dönüş adresi platforma göre değişir: native'de uygulama şeması,
+    // web'de sayfanın kendi kökü. Bkz. features/auth/auth-redirect.ts
+    const result = await sendMagicLink(email.trim(), authRedirectUrl());
     // Başarı mesajı, e-postanın kayıtlı olup olmadığından bağımsız gösterilir;
     // aksi halde hangi adreslerin sistemde olduğu sızardı.
     setState(result.ok ? { kind: 'sent' } : { kind: 'error', code: result.code });

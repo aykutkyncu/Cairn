@@ -28,6 +28,10 @@ export default function TabsLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
+          // Sekme içeriğinin zemini AÇIKÇA temadan gelir. Verilmezse
+          // yönlendiricinin kendi beyaz zemini kalır: koyu temada başlık
+          // neredeyse görünmez olur (ilk web çalıştırmasında böyle görüldü).
+          sceneStyle: { backgroundColor: theme.colors.surface },
           tabBarActiveTintColor: theme.colors.accent,
           tabBarInactiveTintColor: theme.colors.muted,
           tabBarStyle: {
