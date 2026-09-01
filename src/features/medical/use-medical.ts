@@ -12,6 +12,8 @@ import {
   type HealthRecordUpdate,
   type MedicationInput,
 } from './medical-repository';
+import { listDocuments, signedDocumentUrl } from './document-repository';
+import { uploadDocument, type UploadOutcome, type UploadSource } from './document-upload';
 import type { HealthRecordType } from './medical-schema';
 
 /**
@@ -29,6 +31,7 @@ export const medicalKeys = {
   record: (id: string) => [...medicalKeys.all, 'record', id] as const,
   records: (circleId: string, types: readonly HealthRecordType[]) =>
     [...medicalKeys.all, 'records', circleId, [...types].sort().join(',')] as const,
+  documents: (circleId: string) => [...medicalKeys.all, 'documents', circleId] as const,
   search: (circleId: string, query: string) =>
     [...medicalKeys.all, 'search', circleId, query] as const,
 } as const;
@@ -87,6 +90,54 @@ export const useUpdateHealthRecord = () => {
     },
   });
 };
+
+export const useDocuments = (circleId: string | null) =>
+  useQuery({
+    queryKey: medicalKeys.documents(circleId ?? ''),
+    queryFn: () => listDocuments(circleId as string),
+    enabled: circleId !== null,
+  });
+
+/**
+ * Belge yükleme.
+ *
+ * İptal ve izin reddi HATA DEĞİLDİR: ikisi de olağan sonuçtur ve
+ * `UploadOutcome` içinde döner. Bunları hata saymak, kullanıcıya vazgeçtiği
+ * için kırmızı bir uyarı göstermek olurdu.
+ */
+export const useUploadDocument = (): {
+  readonly upload: (input: {
+    readonly circleId: string;
+    readonly source: UploadSource;
+    readonly title: string | null;
+  }) => Promise<UploadOutcome>;
+  readonly isPending: boolean;
+} => {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: (input: {
+      readonly circleId: string;
+      readonly source: UploadSource;
+      readonly title: string | null;
+    }) => uploadDocument(input),
+    onSuccess: async (outcome, input) => {
+      if (outcome.status !== 'uploaded') return;
+      await queryClient.invalidateQueries({ queryKey: medicalKeys.documents(input.circleId) });
+    },
+  });
+
+  return { upload: mutation.mutateAsync, isPending: mutation.isPending };
+};
+
+/**
+ * Görüntüleme için imzalı URL üretir.
+ *
+ * Önbelleğe ALINMAZ: adres kısa ömürlüdür ve önbellekten dönen süresi dolmuş
+ * bir URL, kullanıcıya "belge açılmıyor" olarak görünürdü.
+ */
+export const useSignedDocumentUrl = () =>
+  useMutation({ mutationFn: (objectPath: string) => signedDocumentUrl(objectPath) });
 
 export const useCreateMedication = () => {
   const queryClient = useQueryClient();
