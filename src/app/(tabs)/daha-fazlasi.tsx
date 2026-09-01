@@ -1,8 +1,7 @@
 import { ScrollView, View } from 'react-native';
 
+import { CircleGate } from '@/features/circles';
 import { EmptyState, Text, useTheme } from '@/ui';
-
-import { CircleGate } from './_circle-gate';
 
 /**
  * Daha fazlası sekmesi.

@@ -2,8 +2,9 @@ import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 
-import { useActiveCircle } from '@/features/circles';
 import { EmptyState, ErrorState, Skeleton, useTheme } from '@/ui';
+
+import { useActiveCircle } from './use-circles';
 
 /**
  * Sekme içeriğini aktif çemberin durumuna göre kapılar.
@@ -12,7 +13,10 @@ import { EmptyState, ErrorState, Skeleton, useTheme } from '@/ui';
  * hata ve içerik. Bunu her ekranda yeniden yazmak, birinde unutulmasına yol
  * açar; tek yerde toplanır.
  *
- * Dosya adı alt çizgiyle başlar: Expo Router bunu rota saymaz.
+ * Bileşen `src/app` altında DEĞİL, feature katmanında durur: `src/app`
+ * yalnız rotalar içindir. Alt çizgiyle başlayan bir dosya adı Expo Router'ı
+ * durdurmadı; `(tabs)/_circle-gate` sekme çubuğunda beşinci bir sekme olarak
+ * göründü.
  */
 
 export type CircleGateProps = {

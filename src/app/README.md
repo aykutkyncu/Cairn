@@ -15,12 +15,19 @@ index.tsx              Oturum durumuna göre yönlendirir (loading'de bekler)
 (onboarding)/          Çember kurma ve davet
 invite/[token]         Davet kabulü (derin bağlantı)
 (tabs)/                Ana sekmeler: Bugün, Takvim, Dosya, Daha fazlası
-(tabs)/_circle-gate    Sekmelerin ortak loading/empty/error kapısı
+auth/callback          Magic-link dönüşü (native'de PKCE kodunu oturuma çevirir)
 _dev/                  Geliştirici rotaları; üretim yapılandırmasında görünmez
 ```
 
 `index.tsx`, oturum durumu `loading` iken **yönlendirme yapmaz**: giriş ekranına atmak,
 oturumu olan bir kullanıcıyı her açılışta bir an için çıkış yapmış gibi gösterirdi.
 
-Alt çizgiyle başlayan dosyalar (`_layout.tsx`, `_circle-gate.tsx`) Expo Router tarafından
-rota sayılmaz; ortak düzen ve paylaşılan parçalar için kullanılır.
+**Bu klasörde rota olmayan dosya bulunmaz.** Paylaşılan `CircleGate` bileşeni bir süre
+`(tabs)/_circle-gate.tsx` olarak burada durdu; "alt çizgiyle başlayan dosyayı Expo Router
+rota saymaz" varsayımına dayanıyordu. Varsayım yanlıştı: uygulama tarayıcıda açıldığında
+sekme çubuğunda **`_circle-gate` adında beşinci bir sekme** göründü. Bileşen
+`src/features/circles/circle-gate.tsx` içine taşındı ve kural
+`src/app/__tests__/route-files.test.ts` ile sabitlendi.
+
+`_layout.tsx` Expo Router'ın kendi düzen dosyasıdır ve rota üretmez; `_dev/` ise bilinçli
+olarak rotadır, kendi düzeninde `__DEV__` dışında köke yönlendirir.

@@ -93,6 +93,45 @@ export const sendMagicLink = async (
 };
 
 /**
+ * Magic-link dönüşündeki PKCE kodunu oturuma çevirir.
+ *
+ * Yalnız NATIVE için gereklidir. Web'de `detectSessionInUrl` açıktır ve
+ * Supabase istemcisi kodu sayfa yüklenirken kendisi takas eder; native'de
+ * kapalıdır, çünkü derin bağlantılar uygulamanın kendi yönlendirme
+ * katmanında doğrulanarak işlenir. Bu fonksiyon o katmanın eksik kalan
+ * adımıdır: o olmadan `cairn://auth/callback` açılır ama oturum açılmaz.
+ *
+ * Kod tek kullanımlıktır ve hassastır: log'a, hata raporuna veya arayüze
+ * yazılmaz.
+ */
+export const completeMagicLink = async (code: string): Promise<AuthResult<null>> => {
+  if (!isSupabaseConfigured) return { ok: false, code: 'not_configured' };
+  if (code.length === 0) return { ok: false, code: 'unauthenticated' };
+
+  try {
+    const { data, error } = await getSupabaseClient().auth.exchangeCodeForSession(code);
+
+    if (error !== null && error !== undefined) {
+      // Kodun kendisi değil, yalnız HTTP durumu loglanır.
+      logger.warn('magic_link_exchange_failed', { code: error.status ?? 0 });
+      return { ok: false, code: toErrorCode(error) };
+    }
+
+    if (data?.session === null || data?.session === undefined) {
+      // Hata yok ama oturum da yok: kullanıcıyı "girdin" diye içeri almak,
+      // bir sonraki isteğin sessizce 401 dönmesi demektir.
+      logger.warn('magic_link_exchange_empty');
+      return { ok: false, code: 'unauthenticated' };
+    }
+
+    logger.info('magic_link_exchanged');
+    return { ok: true, data: null };
+  } catch {
+    return { ok: false, code: 'network' };
+  }
+};
+
+/**
  * Oturumu kapatır ve tüm yerel artıkları temizler.
  *
  * Sıra bilinçlidir: önce sunucu oturumu geçersizlenir, sonra yerel izler

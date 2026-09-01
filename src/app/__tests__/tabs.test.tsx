@@ -17,9 +17,17 @@ import TakvimScreen from '../(tabs)/takvim';
 
 const mockUseActiveCircle = jest.fn();
 
-jest.mock('@/features/circles', () => ({
-  useActiveCircle: () => mockUseActiveCircle(),
-}));
+// Çember kapısı artık feature katmanındadır (`features/circles/circle-gate`),
+// `src/app` altında değil: alt çizgiyle başlayan dosya adı Expo Router'ı
+// durdurmuyordu ve sekme çubuğunda beşinci bir sekme olarak görünüyordu.
+// Kapının kendisi gerçek, yalnız veri kaynağı taklit edilir.
+// Taklit, kapının veri kaynağının TA KENDİSİNE konur: `CircleGate` hook'u
+// index üzerinden değil, doğrudan `./use-circles`ten alır; index'i taklit
+// etmek kapının içindeki çağrıyı değiştirmezdi.
+jest.mock('@/features/circles/use-circles', () => {
+  const actual = jest.requireActual('@/features/circles/use-circles');
+  return { ...actual, useActiveCircle: () => mockUseActiveCircle() };
+});
 
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() },

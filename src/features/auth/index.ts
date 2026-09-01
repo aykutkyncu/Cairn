@@ -2,6 +2,7 @@
 
 export {
   acceptInvitation,
+  completeMagicLink,
   createCircle,
   createInvitation,
   sendMagicLink,

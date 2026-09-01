@@ -1,5 +1,6 @@
 import {
   acceptInvitation,
+  completeMagicLink,
   createCircle,
   createInvitation,
   sendMagicLink,
@@ -17,6 +18,7 @@ import {
  */
 
 const mockSignInWithOtp = jest.fn();
+const mockExchangeCode = jest.fn();
 const mockServerSignOut = jest.fn();
 const mockRpc = jest.fn();
 const mockResetClient = jest.fn();
@@ -30,6 +32,7 @@ jest.mock('@/lib/supabase', () => ({
   getSupabaseClient: () => ({
     auth: {
       signInWithOtp: (args: unknown) => mockSignInWithOtp(args),
+      exchangeCodeForSession: (code: string) => mockExchangeCode(code),
       signOut: () => mockServerSignOut(),
     },
     rpc: (name: string, args: unknown) => mockRpc(name, args),
@@ -99,6 +102,68 @@ describe('auth-repository', () => {
       mockSignInWithOtp.mockRejectedValue(new Error('socket hang up'));
 
       await expect(sendMagicLink('a@b.com', 'cairn://x')).resolves.toEqual({
+        ok: false,
+        code: 'network',
+      });
+    });
+  });
+
+  describe('completeMagicLink', () => {
+    it('yapılandırma yokken sunucuya gitmez', async () => {
+      mockIsConfigured.mockReturnValue(false);
+
+      await expect(completeMagicLink('abc')).resolves.toEqual({
+        ok: false,
+        code: 'not_configured',
+      });
+      expect(mockExchangeCode).not.toHaveBeenCalled();
+    });
+
+    it('boş kodu sunucuya göndermez', async () => {
+      await expect(completeMagicLink('')).resolves.toEqual({
+        ok: false,
+        code: 'unauthenticated',
+      });
+      expect(mockExchangeCode).not.toHaveBeenCalled();
+    });
+
+    it('kodu takas eder ve oturum döndüğünde başarılı olur', async () => {
+      mockExchangeCode.mockResolvedValue({
+        data: { session: { user: { id: 'u1' } } },
+        error: null,
+      });
+
+      await expect(completeMagicLink('pkce-code')).resolves.toEqual({ ok: true, data: null });
+      expect(mockExchangeCode).toHaveBeenCalledWith('pkce-code');
+    });
+
+    it('hata yokken oturum da yoksa başarılı saymaz', async () => {
+      // Kullanıcıyı "girdin" diye içeri almak, bir sonraki isteğin sessizce
+      // 401 dönmesi demektir.
+      mockExchangeCode.mockResolvedValue({ data: { session: null }, error: null });
+
+      await expect(completeMagicLink('pkce-code')).resolves.toEqual({
+        ok: false,
+        code: 'unauthenticated',
+      });
+    });
+
+    it('süresi dolmuş bağlantıyı hassas ayrıntı taşımayan koda indirger', async () => {
+      mockExchangeCode.mockResolvedValue({
+        data: { session: null },
+        error: { message: 'invalid flow state', status: 403 },
+      });
+
+      const result = await completeMagicLink('pkce-code');
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.code).toBe('unknown');
+    });
+
+    it('ağ istisnasını network koduna çevirir', async () => {
+      mockExchangeCode.mockRejectedValue(new Error('socket hang up'));
+
+      await expect(completeMagicLink('pkce-code')).resolves.toEqual({
         ok: false,
         code: 'network',
       });
