@@ -54,6 +54,7 @@ const renderView = (props: Partial<Parameters<typeof MedicalFileView>[0]> = {}) 
         onAddMedication={jest.fn()}
         onAddRecord={jest.fn()}
         onOpenNotes={jest.fn()}
+        onOpenDocuments={jest.fn()}
         onOpenSearch={jest.fn()}
         {...props}
       />

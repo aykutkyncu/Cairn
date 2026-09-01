@@ -25,6 +25,7 @@ export type MedicalFileViewProps = {
   readonly onAddMedication: () => void;
   readonly onAddRecord: (type: HealthRecordType) => void;
   readonly onOpenNotes: () => void;
+  readonly onOpenDocuments: () => void;
   readonly onOpenSearch: () => void;
 };
 
@@ -39,6 +40,7 @@ export function MedicalFileView({
   onAddMedication,
   onAddRecord,
   onOpenNotes,
+  onOpenDocuments,
   onOpenSearch,
 }: MedicalFileViewProps) {
   const theme = useTheme();
@@ -60,6 +62,9 @@ export function MedicalFileView({
       <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
         <View style={{ flex: 1 }}>
           <Button variant="secondary" label="Notlar" onPress={onOpenNotes} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button variant="secondary" label="Belgeler" onPress={onOpenDocuments} />
         </View>
         <View style={{ flex: 1 }}>
           <Button variant="secondary" label="Dosyada ara" onPress={onOpenSearch} />

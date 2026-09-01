@@ -2,11 +2,12 @@
 
 Tıbbi dosya: ilaçlar, alerjiler, teşhisler, doktorlar, ölçümler ve notlar.
 
-> Faz 06 durumu (2/n): ilaç ve sağlık kaydı okuma/yazma, Dosya ekranı, rol
+> Faz 06 durumu (3/n): ilaç ve sağlık kaydı okuma/yazma, Dosya ekranı, rol
 > davranışı, ilaçtan göreve açık onaylı geçiş, notlar ve randevu soruları,
-> çakışma korumalı düzenleme ve arama ekranı tamamlandı. **Henüz yok:** belge
-> yükleme ve imzalı URL görüntüleme, OCR, kayıt silme, not yazarının adı
-> (profil sorgusu yazılmadı; uydurmak yerine yalnız tarih gösterilir).
+> çakışma korumalı düzenleme, arama ekranı ve belge yükleme/görüntüleme
+> tamamlandı. **Henüz yok:** OCR (native derleme gerektirir), kayıt ve belge
+> silme, not yazarının adı (profil sorgusu yazılmadı; uydurmak yerine yalnız
+> tarih gösterilir).
 >
 > İlaç oluşturma ve listeleme **gerçek Supabase'e karşı bir kez çalıştırıldı**
 > (depo sahibi, web hedefinde). Diğer akışlar yalnız birim testleriyle
@@ -100,3 +101,56 @@ amaç çalışmayacak bir düğme göstermemektir.
 Sunucu verisi TanStack Query önbelleğinde, yani bellekte yaşar; uygulama
 kapanınca gider. Çevrimdışı okuma Faz 07'nin şifreli yerel deposuna aittir.
 Burada uydurulmuş bir "çevrimdışı dosya" vaadi verilmez.
+
+## Belgeler
+
+Bucket **private**'tır (`0008_storage.sql`). Görüntüleme yalnız **60 saniyelik
+imzalı URL** ile yapılır ve adres her açılışta yeniden üretilir; önbelleğe
+alınmaz. İmzalı adres, elde edildikten sonra oturumdan bağımsız çalışır —
+paylaşılan veya loglanan bir URL, süresi dolana dek belgeye erişim demektir.
+Bu yüzden URL loglanmaz.
+
+### Nesne yolu hasta adı taşımaz
+
+Yol düzeni `<circle_id>/<uuid>.<ext>`. Orijinal dosya adı ayrı sütunda durur.
+"tahlil-sonucu-fatma-demir.jpg" yola girseydi, hasta adı imzalı URL üzerinden
+sızardı. `buildObjectPath` dosya adını parametre olarak bile almaz.
+
+Yolun ilk parçası çember kimliğidir; Storage politikası yetkiyi oradan
+doğrular.
+
+### Yükleme sırası
+
+```
+1. kullanıcı kaynağı SEÇER (kamera / galeri)   - kendiliğinden açılmaz
+2. görsel CİHAZ ÜZERİNDE küçültülür            - uzun kenar 2000 px, kalite 0.7
+3. sınır denetlenir                            - tür + boyut, sunucuya gitmeden
+4. Storage'a yüklenir                          - nesne adı UUID, upsert kapalı
+5. üst veri yazılır                            - orijinal ad ayrı sütunda
+```
+
+5. adım başarısız olursa 4. adımdaki nesne **silinir**: kimsenin göremeyeceği
+   bir dosyayı depoda bırakmak, silme akışının dışında kalan bir sağlık belgesi
+   bırakmaktır.
+
+Denetim küçültmeden **sonra** yapılır. Küçültme denenmeden reddetmek,
+kullanıcının elindeki tek belgeyi kullanılamaz ilan etmek olurdu.
+
+İstemci sınırı (4 MB) sunucu sınırının (15 MB) altındadır: sunucu sınırına
+dayanmak, hatayı yükleme bittikten sonra göstermek olurdu.
+
+**Sıkışma oranı hakkında vaat verilmez.** "Her 10 MB görsel 1 MB olur" demek
+yanlış olurdu; oran görselin içeriğine bağlıdır.
+
+### İptal ve izin reddi hata değildir
+
+İkisi de olağan sonuçtur ve `UploadOutcome` içinde döner. Vazgeçen kullanıcıya
+kırmızı bir uyarı göstermek, onu hata yapmış gibi hissettirirdi.
+
+### OCR yoktur
+
+Kılavuzun OCR maddesi bu adımda uygulanmadı: cihaz üstü OCR native
+development build gerektirir ve iOS/Android derlemesi henüz alınmadı.
+Çalıştırılamayan bir özelliği "var" göstermemek için hiç eklenmedi. Eklendiğinde
+sözleşme gereği ham metin sunucuya, loga veya hata raporuna gitmeyecek ve sonuç
+kullanıcı onaylayana dek taslak sayılacaktır.
