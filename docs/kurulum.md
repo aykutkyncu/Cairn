@@ -214,8 +214,7 @@ npx expo start --dev-client                                # JS paketini servis 
 3. **Boşluksuz NDK yolu.** Google'ın NDK'sı Windows'ta boşluk içeren yolları desteklemez;
    kullanıcı adında boşluk olduğu için CMake C++ derleyicisini çözemiyor ve
    `undefined symbol: operator new` benzeri bağlama hataları veriyordu. NDK
-   `C:\Android
-dk.1.12297006` altına kopyalandı ve `android/local.properties`
+   `C:/Android/ndk/27.1.12297006` altına kopyalandı ve `android/local.properties`
    içine şu satır yazıldı (dosya Git'e girmez, `prebuild` sonrası tekrar yazılmalıdır):
 
    ```
