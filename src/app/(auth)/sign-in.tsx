@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
+import { Redirect } from 'expo-router';
 
 import {
   authRedirectUrl,
   sendMagicLink,
-  verifyEmailCode,
+  startAnonymously,
+  useAuthStore,
   type AuthErrorCode,
 } from '@/features/auth';
 import { Button, Card, Input, Text, useTheme } from '@/ui';
@@ -12,8 +14,25 @@ import { Button, Card, Input, Text, useTheme } from '@/ui';
 /**
  * Giriş ekranı.
  *
- * E-posta ile giriş. Şifre YOKTUR: bakım veren, hatırlaması gereken bir
- * parola daha istemez.
+ * **Kapıda e-posta istenmez.** Uygulamayı açar açmaz adres sormak, değeri
+ * hiç görmemiş kullanıcıyı kaybettirir. Birincil yol "Hemen başla":
+ * anonim ama gerçek bir hesap açılır, kullanıcı çemberini kurar ve
+ * uygulamayı kullanır. E-posta ancak gerçekten gerektiğinde istenir —
+ * başka birini davet ederken veya ikinci cihazdan girerken.
+ *
+ * Sınır sakin ama açık yazılır: e-posta bağlanmadan hesap yalnız bu
+ * cihazdadır.
+ *
+ * E-postayla giriş ikincil yoldur ve şifre YOKTUR: bakım veren,
+ * hatırlaması gereken bir parola daha istemez. Giriş e-postadaki
+ * bağlantıyla tamamlanır.
+ *
+ * **Neden kod alanı yok:** Supabase'in yerleşik e-posta servisi şablon
+ * özelleştirmesine izin vermiyor; şablona `{{ .Token }}` eklenemediği için
+ * kullanıcıya 6 haneli kod ULAŞMIYOR. Gelmeyecek bir kodu bekleten bir alan
+ * göstermek, çalışmayan bir özelliği varmış gibi göstermek olurdu.
+ * `verifyEmailCode` veri katmanında duruyor; kendi SMTP'si bağlandığında
+ * alan geri eklenebilir.
  *
  * **Kod birincil, bağlantı yedektir.** Magic-link mobilde en zayıf yerinde
  * çalışır: kullanıcı uygulamadan çıkar, posta uygulamasını açar, bağlantıya
@@ -38,7 +57,7 @@ const ERROR_MESSAGES: Readonly<Record<AuthErrorCode, string>> = {
   invitation_expired: 'Bu davetin süresi dolmuş.',
   invitation_already_used: 'Bu davet daha önce kullanılmış.',
   forbidden: 'Bu işlem için yetkin yok.',
-  unauthenticated: 'Kod yanlış veya süresi dolmuş. Yeni bir kod isteyebilirsin.',
+  unauthenticated: 'Bu giriş bağlantısı artık geçerli değil. Yeni bir bağlantı iste.',
   unknown: 'Beklenmeyen bir sorun oldu. Tekrar deneyebilirsin.',
 };
 
@@ -49,46 +68,51 @@ const ERROR_MESSAGES: Readonly<Record<AuthErrorCode, string>> = {
  * olur ve kod alanı ekrandan kaybolurdu: kullanıcı yeniden yazacağı yeri
  * bulamazdı.
  */
-type Phase = 'email' | 'code';
-type Busy = 'idle' | 'sending' | 'verifying';
+type Phase =
+  /** Açılış: hesapsız başla ya da e-postayla gir. */
+  | 'start'
+  | 'email'
+  /** Bağlantı gönderildi; kullanıcı e-postasına gidecek. */
+  | 'sent';
+type Busy = 'idle' | 'starting' | 'sending';
 
 const isPlausibleEmail = (value: string): boolean =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
-/** Supabase e-posta kodu 6 hanelidir. */
-const CODE_LENGTH = 6;
-
 export default function SignInScreen() {
   const theme = useTheme();
+  const status = useAuthStore((state) => state.status);
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [phase, setPhase] = useState<Phase>('email');
+  const [phase, setPhase] = useState<Phase>('start');
   const [busy, setBusy] = useState<Busy>('idle');
   const [error, setError] = useState<AuthErrorCode | null>(null);
 
   const canSend = isPlausibleEmail(email) && busy !== 'sending';
-  const canVerify = code.trim().length === CODE_LENGTH && busy !== 'verifying';
+
+  // Oturum bu ekranda açılabilir (hesapsız başlangıç) ya da başka bir yoldan
+  // gelebilir. Açıldığında ekranda kalmak, kullanıcıyı işe yaramış bir
+  // düğmeye tekrar tekrar bastırırdı; nereye gidileceğine kök ekran karar
+  // verir.
+  if (status === 'signed-in') return <Redirect href="/" />;
+
+  const handleStart = async (): Promise<void> => {
+    setBusy('starting');
+    setError(null);
+    const result = await startAnonymously();
+    setBusy('idle');
+    // Başarıda yönlendirme yapılmaz: oturum değişince kök ekran karar verir.
+    if (!result.ok) setError(result.code);
+  };
 
   const handleSend = async (): Promise<void> => {
     setBusy('sending');
     setError(null);
     const result = await sendMagicLink(email.trim(), authRedirectUrl());
     setBusy('idle');
-    // Kod adımına geçiş, e-postanın kayıtlı olup olmadığından BAĞIMSIZDIR;
-    // aksi halde hangi adreslerin sistemde olduğu sızardı.
-    if (result.ok) setPhase('code');
+    // "Gönderildi" mesajı, e-postanın kayıtlı olup olmadığından BAĞIMSIZ
+    // gösterilir; aksi halde hangi adreslerin sistemde olduğu sızardı.
+    if (result.ok) setPhase('sent');
     else setError(result.code);
-  };
-
-  const handleVerify = async (): Promise<void> => {
-    setBusy('verifying');
-    setError(null);
-    const result = await verifyEmailCode(email.trim(), code);
-    setBusy('idle');
-    // Başarıda yönlendirme yapılmaz: oturum durumu değişince kök ekran
-    // karar verir. Buradan sekmelere gitmek, oturum store'a yazılmadan
-    // çember kapısına çarpabilirdi.
-    if (!result.ok) setError(result.code);
   };
 
   return (
@@ -113,84 +137,98 @@ export default function SignInScreen() {
 
       <Card variant="sunk">
         <Text variant="caption" style={{ fontWeight: '700' }}>
-          E-POSTANI İSTEMEDEN ÖNCE
+          BAŞLAMADAN ÖNCE
         </Text>
         <Text tone="inkSoft" variant="caption">
           Yazdıkların yalnız kurduğun çemberin üyelerine açıktır; başka çemberler göremez. Cairn
-          tıbbi tavsiye vermez, teşhis koymaz ve ilaç doğruluğunu denetlemez. Şifre istemiyoruz:
-          girişte e-postana tek kullanımlık bir kod gönderiyoruz.
+          tıbbi tavsiye vermez, teşhis koymaz ve ilaç doğruluğunu denetlemez.
         </Text>
       </Card>
 
-      <Card>
-        <Input
-          autoCapitalize="none"
-          autoComplete="email"
-          editable={phase === 'email'}
-          keyboardType="email-address"
-          label="E-posta"
-          onChangeText={(value) => {
-            setEmail(value);
-            setError(null);
-          }}
-          placeholder="ornek@eposta.com"
-          required
-          value={email}
-        />
-
-        {phase === 'code' ? null : (
-          <Button
-            disabled={!canSend}
-            label="Giriş kodu gönder"
-            loading={busy === 'sending'}
-            loadingLabel="Gönderiliyor"
-            onPress={() => {
-              void handleSend();
-            }}
-          />
-        )}
-      </Card>
-
-      {phase === 'code' ? (
+      {phase === 'start' ? (
         <Card>
-          <Text variant="title">Kodu gir</Text>
+          <Text variant="title">Hesap açmadan başla</Text>
           <Text tone="inkSoft" variant="caption">
-            E-postana 6 haneli bir kod gönderdik. Aynı e-postadaki bağlantıya dokunarak da
-            girebilirsin; kod, uygulamadan çıkmadan girmen için.
+            E-posta istemiyoruz. Çemberini kur, görevlerini ekle, uygulamayı gör. E-postanı sonra,
+            birini davet ederken veya ikinci cihazdan girerken bağlayabilirsin.
           </Text>
 
-          <Input
-            autoComplete="one-time-code"
-            keyboardType="number-pad"
-            label="6 haneli kod"
-            maxLength={CODE_LENGTH}
-            onChangeText={(value) => {
-              setCode(value);
-              setError(null);
+          <Button
+            label="Hemen başla"
+            loading={busy === 'starting'}
+            loadingLabel="Hazırlanıyor"
+            onPress={() => {
+              void handleStart();
             }}
-            placeholder="000000"
-            required
-            value={code}
           />
 
-          <Button
-            disabled={!canVerify}
-            label="Giriş yap"
-            loading={busy === 'verifying'}
-            loadingLabel="Kontrol ediliyor"
-            onPress={() => {
-              void handleVerify();
-            }}
-          />
+          <Text tone="inkSoft" variant="caption">
+            Bu hesap yalnız bu cihazdadır. E-posta bağlamadan telefonu kaybedersen kayıtların geri
+            getirilemez.
+          </Text>
 
           <Button
             variant="ghost"
-            label="Kodu tekrar gönder"
+            label="E-postamla gir"
             onPress={() => {
-              setCode('');
-              void handleSend();
+              setError(null);
+              setPhase('email');
             }}
           />
+        </Card>
+      ) : null}
+
+      {phase === 'start' ? null : (
+        <Card>
+          <Input
+            autoCapitalize="none"
+            autoComplete="email"
+            editable={phase !== 'sent'}
+            keyboardType="email-address"
+            label="E-posta"
+            onChangeText={(value) => {
+              setEmail(value);
+              setError(null);
+            }}
+            placeholder="ornek@eposta.com"
+            required
+            value={email}
+          />
+
+          {phase === 'sent' ? null : (
+            <Button
+              disabled={!canSend}
+              label="Giriş kodu gönder"
+              loading={busy === 'sending'}
+              loadingLabel="Gönderiliyor"
+              onPress={() => {
+                void handleSend();
+              }}
+            />
+          )}
+
+          {phase === 'email' ? (
+            <Button
+              variant="ghost"
+              label="Vazgeç, hesapsız başla"
+              onPress={() => {
+                setError(null);
+                setPhase('start');
+              }}
+            />
+          ) : null}
+        </Card>
+      )}
+
+      {phase === 'sent' ? (
+        <Card variant="sunk">
+          <Text tone="success" variant="caption" style={{ fontWeight: '700' }}>
+            GÖNDERİLDİ
+          </Text>
+          <Text>
+            E-postandaki bağlantıya bu cihazdan dokunarak giriş yapabilirsin. Bağlantı kısa süre
+            geçerlidir.
+          </Text>
         </Card>
       ) : null}
 

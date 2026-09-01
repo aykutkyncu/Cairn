@@ -21,6 +21,15 @@ export type AuthUser = {
   readonly id: string;
   /** Yalnız giriş akışında gösterilir; log ve analytics'e yazılmaz. */
   readonly email: string | null;
+  /**
+   * Hesap anonim mi?
+   *
+   * Anonim hesap GERÇEK bir hesaptır (kendi `auth.uid()`'si vardır, RLS
+   * normal çalışır) fakat **yalnız bu cihaza bağlıdır**: e-posta
+   * eklenmeden cihaz kaybolursa veri geri getirilemez. Arayüz bunu sakin
+   * ama açık biçimde söylemek zorundadır.
+   */
+  readonly isAnonymous: boolean;
 };
 
 type AuthState = {

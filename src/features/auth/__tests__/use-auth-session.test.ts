@@ -61,7 +61,13 @@ describe('useAuthSession', () => {
 
     // Assert
     await waitFor(() => expect(useAuthStore.getState().status).toBe('signed-in'));
-    expect(useAuthStore.getState().user).toEqual({ id: 'user-1', email: 'ornek@eposta.com' });
+    expect(useAuthStore.getState().user).toEqual({
+      id: 'user-1',
+      email: 'ornek@eposta.com',
+      // E-postası olan hesap anonim sayılmaz: e-posta hesabı kurtarılabilir
+      // hale getirir.
+      isAnonymous: false,
+    });
   });
 
   it('yapılandırma yoksa sunucuya gitmeden signed-out yapar', async () => {

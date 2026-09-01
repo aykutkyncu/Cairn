@@ -62,6 +62,71 @@ const toErrorCode = (error: unknown): AuthErrorCode => {
 };
 
 /**
+ * Hesapsız başlatır: anonim ama GERÇEK bir oturum açar.
+ *
+ * Neden: uygulamayı açar açmaz e-posta istemek, değeri hiç görmemiş bir
+ * kullanıcıyı kapıda kaybettirir. Anonim hesabın kendi `auth.uid()`'si
+ * vardır; RLS, çember kurma ve tüm yazma yolları normal çalışır. Sahte bir
+ * "demo modu" DEĞİLDİR — veri gerçektir ve sonradan e-posta bağlanınca
+ * aynı veri korunur.
+ *
+ * **Sınırı açıkça yazılmalıdır:** e-posta bağlanmadan hesap yalnız bu
+ * cihazdadır. Cihaz kaybolursa veriyi geri getirecek bir kimlik kanıtı
+ * yoktur. Arayüz bunu kullanıcıya söylemek zorundadır.
+ *
+ * Supabase panelinde "Anonymous sign-ins" kapalıysa sunucu reddeder; bu
+ * durumda kullanıcı e-postayla girişe yönlendirilir.
+ */
+export const startAnonymously = async (): Promise<AuthResult<null>> => {
+  if (!isSupabaseConfigured) return { ok: false, code: 'not_configured' };
+
+  try {
+    const { data, error } = await getSupabaseClient().auth.signInAnonymously();
+
+    if (error !== null && error !== undefined) {
+      logger.warn('anonymous_start_failed', { code: error.status ?? 0 });
+      return { ok: false, code: toErrorCode(error) };
+    }
+
+    if (data?.session === null || data?.session === undefined) {
+      logger.warn('anonymous_start_empty_session');
+      return { ok: false, code: 'unknown' };
+    }
+
+    logger.info('anonymous_started');
+    return { ok: true, data: null };
+  } catch {
+    return { ok: false, code: 'network' };
+  }
+};
+
+/**
+ * Anonim hesaba e-posta bağlar.
+ *
+ * Hesap değişmez: aynı `auth.uid()`, aynı çemberler, aynı veri. Yalnız
+ * kurtarılabilir hale gelir. Supabase doğrulama e-postası gönderir;
+ * **e-posta onaylanana kadar hesap anonim sayılmaya devam eder**, çünkü
+ * onaylanmamış bir adres kurtarma sağlamaz.
+ */
+export const linkEmail = async (email: string): Promise<AuthResult<null>> => {
+  if (!isSupabaseConfigured) return { ok: false, code: 'not_configured' };
+
+  try {
+    const { error } = await getSupabaseClient().auth.updateUser({ email: email.trim() });
+
+    if (error !== null && error !== undefined) {
+      logger.warn('link_email_failed', { code: error.status ?? 0 });
+      return { ok: false, code: toErrorCode(error) };
+    }
+
+    logger.info('link_email_requested');
+    return { ok: true, data: null };
+  } catch {
+    return { ok: false, code: 'network' };
+  }
+};
+
+/**
  * E-posta ile magic-link gönderir.
  *
  * Şifre kullanılmaz. Kullanıcıya "bağlantı gönderildi" mesajı, e-postanın
