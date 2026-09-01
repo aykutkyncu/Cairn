@@ -221,6 +221,20 @@ npx expo start --dev-client                                # JS paketini servis 
    ndk.dir=C:/Android/ndk/27.1.12297006
    ```
 
+**Supabase e-posta şablonu (kodla giriş için zorunlu):** `Authentication → Emails → Magic
+Link` şablonuna `{{ .Token }}` eklenmelidir. Varsayılan şablonda yalnız bağlantı vardır;
+kod gönderilmez ve uygulamadaki "6 haneli kod" alanı boşta kalır. Örnek gövde:
+
+```html
+<h2>Cairn giriş kodun</h2>
+<p>Bu kod tek kullanımlıktır ve kısa süre geçerlidir:</p>
+<p style="font-size:28px;letter-spacing:4px"><strong>{{ .Token }}</strong></p>
+<p>Dilersen bağlantıya da dokunabilirsin:</p>
+<p><a href="{{ .ConfirmationURL }}">Giriş yap</a></p>
+```
+
+Şablon düzeltilmezse bağlantıyla giriş çalışmaya devam eder; yalnız kod yolu kapalı kalır.
+
 **Supabase ayarı (zorunlu):** `Authentication → URL Configuration → Redirect URLs` listesine
 `cairn://auth/callback` eklenmelidir. Listede olmayan adrese yönlendirme sessizce site_url'e
 düşer ve giriş tamamlanmaz.

@@ -7,6 +7,7 @@ export {
   createInvitation,
   sendMagicLink,
   signOut,
+  verifyEmailCode,
   type AuthErrorCode,
   type AuthResult,
 } from './auth-repository';

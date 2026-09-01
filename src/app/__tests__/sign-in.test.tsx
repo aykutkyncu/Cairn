@@ -7,14 +7,20 @@ import SignInScreen from '../(auth)/sign-in';
 /**
  * Giriş ekranı testleri.
  *
- * En kritik davranış: başarı mesajı, e-postanın kayıtlı olup olmadığından
- * BAĞIMSIZ gösterilir. Aksi halde hangi adreslerin sistemde olduğu sızardı.
+ * Kritik davranışlar:
+ * - Kod adımına geçiş, e-postanın kayıtlı olup olmadığından BAĞIMSIZDIR;
+ *   aksi halde hangi adreslerin sistemde olduğu sızardı.
+ * - Yanlış koddan sonra kod alanı ekranda KALIR: kullanıcı yeniden
+ *   yazacağı yeri kaybetmemelidir.
+ * - E-posta istenmeden önce ne olduğu ve ne olmadığı yazılıdır.
  */
 
 const mockSendMagicLink = jest.fn();
+const mockVerifyEmailCode = jest.fn();
 
 jest.mock('@/features/auth', () => ({
   sendMagicLink: (email: string, redirect: string) => mockSendMagicLink(email, redirect),
+  verifyEmailCode: (email: string, code: string) => mockVerifyEmailCode(email, code),
   // Test ortamı native platform olarak koşar; dönüş adresi uygulama şemasıdır.
   authRedirectUrl: () => 'cairn://auth/callback',
 }));
@@ -26,10 +32,20 @@ const renderScreen = () =>
     </ThemeProvider>,
   );
 
+/** E-postayı yazıp kod adımına geçer. */
+const goToCodeStep = async (screen: Awaited<ReturnType<typeof renderScreen>>) => {
+  const user = userEvent.setup();
+  await user.type(screen.getByLabelText(/E-posta/), 'ornek@eposta.com');
+  await user.press(screen.getByRole('button', { name: 'Giriş kodu gönder' }));
+  await waitFor(() => expect(screen.getByLabelText(/6 haneli kod/)).toBeTruthy());
+  return user;
+};
+
 describe('SignInScreen', () => {
   beforeEach(() => {
-    mockSendMagicLink.mockReset();
+    jest.clearAllMocks();
     mockSendMagicLink.mockResolvedValue({ ok: true, data: null });
+    mockVerifyEmailCode.mockResolvedValue({ ok: true, data: null });
   });
 
   it('ürün adını erişilebilir başlık olarak gösterir', async () => {
@@ -38,85 +54,105 @@ describe('SignInScreen', () => {
     expect(getByRole('header', { name: 'Cairn' })).toBeTruthy();
   });
 
+  it('e-posta istemeden önce veri sınırını ve tıbbi sınırı yazar', async () => {
+    // Sağlık verisi tutacak bir uygulamaya adres vermeden önce kullanıcı
+    // neyin nerede durduğunu bilmelidir.
+    const { getByText } = await renderScreen();
+
+    expect(getByText(/yalnız kurduğun çemberin üyelerine açıktır/)).toBeTruthy();
+    expect(getByText(/tıbbi tavsiye vermez/)).toBeTruthy();
+  });
+
   it('geçersiz e-posta ile gönderim yapmaz', async () => {
-    // Arrange
     const { getByLabelText, getByRole } = await renderScreen();
-
-    // Act: "@" içermeyen bir metin.
     const user = userEvent.setup();
-    await user.type(getByLabelText(/E-posta/), 'ornek');
-    await user.press(getByRole('button', { name: 'Giriş bağlantısı gönder' }));
 
-    // Assert
+    await user.type(getByLabelText(/E-posta/), 'ornek');
+    await user.press(getByRole('button', { name: 'Giriş kodu gönder' }));
+
     expect(mockSendMagicLink).not.toHaveBeenCalled();
   });
 
-  it('geçerli e-postayı kırpıp gönderir', async () => {
-    // Arrange
-    const { getByLabelText, getByRole } = await renderScreen();
+  it('kod gönderir ve kod adımına geçer', async () => {
+    const screen = await renderScreen();
+    await goToCodeStep(screen);
 
-    // Act
-    const user = userEvent.setup();
-    await user.type(getByLabelText(/E-posta/), '  ornek@eposta.com  ');
-    await user.press(getByRole('button', { name: 'Giriş bağlantısı gönder' }));
-
-    // Assert
-    await waitFor(() => expect(mockSendMagicLink).toHaveBeenCalledTimes(1));
     expect(mockSendMagicLink).toHaveBeenCalledWith('ornek@eposta.com', 'cairn://auth/callback');
+    expect(screen.getByRole('button', { name: 'Giriş yap' })).toBeTruthy();
   });
 
-  it('başarıda kullanıcıya adresin kayıtlı olup olmadığını sızdırmayan mesaj gösterir', async () => {
-    // Arrange
-    const { getByLabelText, getByRole, findByText } = await renderScreen();
+  it('bağlantı yolunun da açık olduğunu söyler', async () => {
+    // Kod birincil, bağlantı yedektir; kullanıcı ikisini de bilmelidir.
+    const screen = await renderScreen();
+    await goToCodeStep(screen);
 
-    // Act
-    const user = userEvent.setup();
-    await user.type(getByLabelText(/E-posta/), 'ornek@eposta.com');
-    await user.press(getByRole('button', { name: 'Giriş bağlantısı gönder' }));
-
-    // Assert: mesaj "hesabın var" ya da "kayıt bulunamadı" demez.
-    const message = await findByText(/Bağlantı gönderildi/);
-    expect(message).toBeTruthy();
+    expect(screen.getByText(/bağlantıya dokunarak da/)).toBeTruthy();
   });
 
-  it('hata kodunu teknik ayrıntı içermeyen bir cümleye çevirir', async () => {
-    // Arrange
-    mockSendMagicLink.mockResolvedValue({ ok: false, code: 'rate_limited' });
-    const { getByLabelText, getByRole, findByText } = await renderScreen();
+  it('eksik kodu sunucuya göndermez', async () => {
+    const screen = await renderScreen();
+    const user = await goToCodeStep(screen);
 
-    // Act
-    const user = userEvent.setup();
-    await user.type(getByLabelText(/E-posta/), 'ornek@eposta.com');
-    await user.press(getByRole('button', { name: 'Giriş bağlantısı gönder' }));
+    await user.type(screen.getByLabelText(/6 haneli kod/), '123');
+    await user.press(screen.getByRole('button', { name: 'Giriş yap' }));
 
-    // Assert
-    expect(await findByText(/Çok fazla deneme yapıldı/)).toBeTruthy();
+    expect(mockVerifyEmailCode).not.toHaveBeenCalled();
   });
 
-  it('kullanıcı yazmaya devam edince hata mesajını kaldırır', async () => {
-    // Arrange
+  it('altı haneli kodu doğrulamaya gönderir', async () => {
+    const screen = await renderScreen();
+    const user = await goToCodeStep(screen);
+
+    await user.type(screen.getByLabelText(/6 haneli kod/), '123456');
+    await user.press(screen.getByRole('button', { name: 'Giriş yap' }));
+
+    expect(mockVerifyEmailCode).toHaveBeenCalledWith('ornek@eposta.com', '123456');
+  });
+
+  it('yanlış kodda kod alanı ekranda kalır', async () => {
+    // Alan kaybolsaydı kullanıcı yeniden yazacağı yeri bulamazdı.
+    mockVerifyEmailCode.mockResolvedValue({ ok: false, code: 'unauthenticated' });
+    const screen = await renderScreen();
+    const user = await goToCodeStep(screen);
+
+    await user.type(screen.getByLabelText(/6 haneli kod/), '000000');
+    await user.press(screen.getByRole('button', { name: 'Giriş yap' }));
+
+    await waitFor(() => expect(screen.getByText(/Kod yanlış veya süresi dolmuş/)).toBeTruthy());
+    expect(screen.getByLabelText(/6 haneli kod/)).toBeTruthy();
+  });
+
+  it('kodu tekrar gönderebilir', async () => {
+    const screen = await renderScreen();
+    const user = await goToCodeStep(screen);
+
+    await user.press(screen.getByRole('button', { name: 'Kodu tekrar gönder' }));
+
+    expect(mockSendMagicLink).toHaveBeenCalledTimes(2);
+  });
+
+  it('gönderim hatasında kod adımına geçmez', async () => {
     mockSendMagicLink.mockResolvedValue({ ok: false, code: 'network' });
-    const { getByLabelText, getByRole, findByText, queryByText } = await renderScreen();
-
+    const { getByLabelText, getByRole, findByText, queryByLabelText } = await renderScreen();
     const user = userEvent.setup();
+
     await user.type(getByLabelText(/E-posta/), 'ornek@eposta.com');
-    await user.press(getByRole('button', { name: 'Giriş bağlantısı gönder' }));
+    await user.press(getByRole('button', { name: 'Giriş kodu gönder' }));
+
     await findByText(/Bağlantı kurulamadı/);
-
-    // Act
-    await user.type(getByLabelText(/E-posta/), 'x');
-
-    // Assert
-    await waitFor(() => expect(queryByText(/Bağlantı kurulamadı/)).toBeNull());
+    expect(queryByLabelText(/6 haneli kod/)).toBeNull();
   });
 
-  it('şifre alanı ve üçüncü taraf giriş düğmesi göstermez', async () => {
-    // Sözleşme: çalıştırılmamış bir akış için düğme göstermek, olmayan bir
-    // özelliği vaat etmektir.
-    const { queryByText, queryByLabelText } = await renderScreen();
+  it('hata mesajı teknik ayrıntı ve e-posta içermez', async () => {
+    mockSendMagicLink.mockResolvedValue({ ok: false, code: 'rate_limited' });
+    const { getByLabelText, getByRole, findByText, queryByText } = await renderScreen();
+    const user = userEvent.setup();
 
-    expect(queryByLabelText(/Şifre/)).toBeNull();
-    expect(queryByText(/Google/)).toBeNull();
-    expect(queryByText(/Apple/)).toBeNull();
+    await user.type(getByLabelText(/E-posta/), 'ornek@eposta.com');
+    await user.press(getByRole('button', { name: 'Giriş kodu gönder' }));
+
+    await findByText(/Çok fazla deneme/);
+    expect(queryByText(/rate_limited/)).toBeNull();
+    expect(queryByText(/429/)).toBeNull();
   });
 });

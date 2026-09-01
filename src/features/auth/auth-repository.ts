@@ -93,6 +93,54 @@ export const sendMagicLink = async (
 };
 
 /**
+ * E-postaya gönderilen 6 haneli kodu oturuma çevirir.
+ *
+ * Neden kod: magic-link mobilde en zayıf yerinde çalışır — kullanıcı
+ * uygulamadan çıkar, posta uygulamasını açar, bağlantıya dokunur, geri
+ * döner. Bakım verenin dikkati zaten bölünmüştür. Kod, uygulamadan hiç
+ * çıkmadan girmeyi sağlar; bağlantı yedek olarak durur.
+ *
+ * Kod hassastır ve tek kullanımlıktır: log'a, hata raporuna veya arayüz
+ * hata metnine yazılmaz.
+ *
+ * **Gereklilik:** Supabase'in "Magic Link" e-posta şablonu `{{ .Token }}`
+ * içermelidir. İçermezse kullanıcıya kod ulaşmaz; bu durumda bağlantıyla
+ * giriş çalışmaya devam eder.
+ */
+export const verifyEmailCode = async (email: string, code: string): Promise<AuthResult<null>> => {
+  if (!isSupabaseConfigured) return { ok: false, code: 'not_configured' };
+
+  const token = code.trim();
+  if (token.length === 0) return { ok: false, code: 'unauthenticated' };
+
+  try {
+    const { data, error } = await getSupabaseClient().auth.verifyOtp({
+      email,
+      token,
+      type: 'email',
+    });
+
+    if (error !== null && error !== undefined) {
+      // Yalnız HTTP durumu loglanır; kod ve e-posta yazılmaz.
+      logger.warn('email_code_failed', { code: error.status ?? 0 });
+      // Yanlış veya süresi dolmuş kod, ağ hatası gibi gösterilmemelidir:
+      // kullanıcı "tekrar dene" yerine "yeni kod iste" yapmalıdır.
+      return { ok: false, code: error.status === 403 ? 'unauthenticated' : toErrorCode(error) };
+    }
+
+    if (data?.session === null || data?.session === undefined) {
+      logger.warn('email_code_empty_session');
+      return { ok: false, code: 'unauthenticated' };
+    }
+
+    logger.info('email_code_verified');
+    return { ok: true, data: null };
+  } catch {
+    return { ok: false, code: 'network' };
+  }
+};
+
+/**
  * Magic-link dönüşündeki PKCE kodunu oturuma çevirir.
  *
  * Yalnız NATIVE için gereklidir. Web'de `detectSessionInUrl` açıktır ve

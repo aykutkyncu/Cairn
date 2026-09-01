@@ -5,6 +5,7 @@ import {
   createInvitation,
   sendMagicLink,
   signOut,
+  verifyEmailCode,
 } from '../auth-repository';
 
 /**
@@ -19,6 +20,7 @@ import {
 
 const mockSignInWithOtp = jest.fn();
 const mockExchangeCode = jest.fn();
+const mockVerifyOtp = jest.fn();
 const mockServerSignOut = jest.fn();
 const mockRpc = jest.fn();
 const mockResetClient = jest.fn();
@@ -33,6 +35,7 @@ jest.mock('@/lib/supabase', () => ({
     auth: {
       signInWithOtp: (args: unknown) => mockSignInWithOtp(args),
       exchangeCodeForSession: (code: string) => mockExchangeCode(code),
+      verifyOtp: (args: unknown) => mockVerifyOtp(args),
       signOut: () => mockServerSignOut(),
     },
     rpc: (name: string, args: unknown) => mockRpc(name, args),
@@ -46,6 +49,19 @@ jest.mock('expo-crypto', () => ({
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
   CryptoEncoding: { HEX: 'hex' },
   digestStringAsync: jest.fn().mockResolvedValue('a'.repeat(64)),
+}));
+
+const mockLogWarn = jest.fn();
+
+// Log satırlarının hassas içerik taşımadığını doğrulamak için logger taklit
+// edilir; asıl sınanan, koda ve e-postaya log'da yer olmadığıdır.
+jest.mock('@/lib/logger', () => ({
+  logger: {
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: (event: string, data?: unknown) => mockLogWarn(event, data),
+    error: jest.fn(),
+  },
 }));
 
 const mockClearArtifacts = jest.fn();
@@ -102,6 +118,85 @@ describe('auth-repository', () => {
       mockSignInWithOtp.mockRejectedValue(new Error('socket hang up'));
 
       await expect(sendMagicLink('a@b.com', 'cairn://x')).resolves.toEqual({
+        ok: false,
+        code: 'network',
+      });
+    });
+  });
+
+  describe('verifyEmailCode', () => {
+    it('yapılandırma yokken sunucuya gitmez', async () => {
+      mockIsConfigured.mockReturnValue(false);
+
+      await expect(verifyEmailCode('a@b.com', '123456')).resolves.toEqual({
+        ok: false,
+        code: 'not_configured',
+      });
+      expect(mockVerifyOtp).not.toHaveBeenCalled();
+    });
+
+    it('boş kodu göndermez', async () => {
+      await expect(verifyEmailCode('a@b.com', '  ')).resolves.toEqual({
+        ok: false,
+        code: 'unauthenticated',
+      });
+      expect(mockVerifyOtp).not.toHaveBeenCalled();
+    });
+
+    it('kodu e-posta türüyle doğrular', async () => {
+      mockVerifyOtp.mockResolvedValue({ data: { session: { user: { id: 'u1' } } }, error: null });
+
+      await expect(verifyEmailCode('a@b.com', ' 123456 ')).resolves.toEqual({
+        ok: true,
+        data: null,
+      });
+      // Boşluklar kırpılır: kullanıcı kodu kopyalarken boşluk taşıyabilir.
+      expect(mockVerifyOtp).toHaveBeenCalledWith({
+        email: 'a@b.com',
+        token: '123456',
+        type: 'email',
+      });
+    });
+
+    it('yanlış kodu ağ hatası gibi göstermez', async () => {
+      // Kullanıcı "tekrar dene" değil, "yeni kod iste" yapmalıdır.
+      mockVerifyOtp.mockResolvedValue({
+        data: { session: null },
+        error: { message: 'Token has expired', status: 403 },
+      });
+
+      await expect(verifyEmailCode('a@b.com', '123456')).resolves.toEqual({
+        ok: false,
+        code: 'unauthenticated',
+      });
+    });
+
+    it('hata yokken oturum da yoksa başarılı saymaz', async () => {
+      mockVerifyOtp.mockResolvedValue({ data: { session: null }, error: null });
+
+      await expect(verifyEmailCode('a@b.com', '123456')).resolves.toEqual({
+        ok: false,
+        code: 'unauthenticated',
+      });
+    });
+
+    it('kodu ve e-postayı loglamaz', async () => {
+      mockVerifyOtp.mockResolvedValue({
+        data: { session: null },
+        error: { message: 'nope', status: 403 },
+      });
+
+      await verifyEmailCode('gizli@eposta.com', '424242');
+
+      const logged = JSON.stringify(mockLogWarn.mock.calls);
+      expect(logged).not.toContain('424242');
+      expect(logged).not.toContain('gizli@eposta.com');
+    });
+
+    it('ağ istisnasını network koduna çevirir', async () => {
+      mockVerifyOtp.mockRejectedValue(new Error('socket hang up'));
+
+      await expect(verifyEmailCode('a@b.com', '123456')).resolves.toEqual({
         ok: false,
         code: 'network',
       });
