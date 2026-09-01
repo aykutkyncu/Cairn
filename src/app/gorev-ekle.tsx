@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { CircleGate, useActiveCircle } from '@/features/circles';
 import {
@@ -24,8 +24,28 @@ import { Button, Card, Input, MIN_TOUCH_TARGET, Text, useTheme } from '@/ui';
  * şehirdeki bakım veren için bu fark önemlidir.
  */
 export default function GorevEkleScreen() {
-  return <CircleGate>{(circleId) => <CreateTaskForm circleId={circleId} />}</CircleGate>;
+  // Ön dolgu, ilaç kaydından "hatırlatma kur" denildiğinde gelir. Parametre
+  // yalnız formun BAŞLANGIÇ değerini belirler; saat, tekrar ve kaydetme
+  // kararı kullanıcınındır — otomatik ilaç hatırlatması yasaktır.
+  const params = useLocalSearchParams<{ title?: string | string[]; kind?: string | string[] }>();
+  const prefillTitle = firstParam(params.title);
+  const prefillKind = KIND_OPTIONS.find((option) => option === firstParam(params.kind)) ?? null;
+
+  return (
+    <CircleGate>
+      {(circleId) => (
+        <CreateTaskForm circleId={circleId} initialTitle={prefillTitle} initialKind={prefillKind} />
+      )}
+    </CircleGate>
+  );
 }
+
+/** Expo Router parametreleri dizi de olabilir; ilk değer alınır. */
+const firstParam = (value: string | string[] | undefined): string => {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value[0] ?? '';
+  return '';
+};
 
 const KIND_OPTIONS: readonly TaskKind[] = ['medication', 'appointment', 'visit', 'other'];
 
@@ -36,13 +56,21 @@ const RECURRENCE_OPTIONS: readonly Exclude<RecurrencePreset, 'custom'>[] = [
   'weekly',
 ];
 
-function CreateTaskForm({ circleId }: { readonly circleId: string }) {
+function CreateTaskForm({
+  circleId,
+  initialTitle,
+  initialKind,
+}: {
+  readonly circleId: string;
+  readonly initialTitle: string;
+  readonly initialKind: TaskKind | null;
+}) {
   const theme = useTheme();
   const { activeCircle } = useActiveCircle();
   const timeZone = activeCircle?.timezone ?? 'Europe/Istanbul';
 
-  const [kind, setKind] = useState<TaskKind>('medication');
-  const [title, setTitle] = useState('');
+  const [kind, setKind] = useState<TaskKind>(initialKind ?? 'medication');
+  const [title, setTitle] = useState(initialTitle);
   const [localDate, setLocalDate] = useState(() => todayLocalDate(timeZone));
   const [localTime, setLocalTime] = useState('08:00');
   const [recurrence, setRecurrence] = useState<Exclude<RecurrencePreset, 'custom'>>('daily');
