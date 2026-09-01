@@ -115,10 +115,13 @@ Faz 00 kapsamında kod tarafı tamamdır, fakat aşağıdakiler depo sahibinin m
   geçmişi taraması CI'daki `gitleaks-action` ile yapılır.
 - **Uygulama fiziksel cihazda veya emülatörde çalıştırılmamıştır.** Yalnız web hedefinde
   (`npm run web`) açılmıştır; iOS/Android derlemesi hiç alınmamıştır.
-- **Magic-link akışı web'de yarıya kadar denenmiştir.** Gerçek bir e-posta gönderilip
-  bağlantıya tıklanmıştır; dönüş adresi kusuru (`cairn://` şemasının tarayıcıda boş sayfa
-  açması) bu denemede bulunmuş ve `authRedirectUrl()` ile düzeltilmiştir. Düzeltmeden
-  sonraki uçtan uca giriş (bağlantıya tıkla → oturum açık) **yeniden denenmemiştir.**
+- **Magic-link akışı web'de çalışmıştır, native'de hiç denenmemiştir.** Gerçek bir e-posta
+  gönderilip bağlantıya tıklanmış, dönüş adresi kusuru (`cairn://` şemasının tarayıcıda
+  boş sayfa açması) bu denemede bulunup `authRedirectUrl()` ile düzeltilmiştir. Tarayıcıda
+  sonrasında açık bir oturum ve kurulmuş bir çember gözlenmiştir; **giriş anının kendisi
+  (bağlantıya tıklama → oturum) bir kez daha izlenmemiştir.** Native dönüş ekranı
+  (`src/app/auth/callback.tsx`) yalnız birim testleriyle kanıtlıdır: iOS/Android derlemesi
+  alınmadığı için `cairn://auth/callback` gerçek bir cihazda hiç açılmamıştır.
 - **Gerçek eşzamanlılık sınanmamıştır.** PGlite tek bağlantılıdır; "aynı davet iki
   eşzamanlı denemede yalnız bir kez kabul edilir" kriteri, kontrolün ve yazmanın tek bir
   `UPDATE` ifadesinde (satır kilidiyle) olmasıyla tasarlanmıştır, fakat çok bağlantılı
@@ -182,6 +185,9 @@ Faz 05 ile eklenenler:
   oluşturulabilir; düzenleme Faz 06 ve sonrasına bırakılmıştır.
 - DST kararları (ileri atlamada ilk gerçek ana çekme, geri atlamada ilk geçişi kabul)
   birim testleriyle sabittir; gerçek bir DST gecesinde cihazda görülmemiştir.
+- **Sekme çubuğu ikonları web'de yer tutucu görünür.** İkon seti native sembollere
+  dayanır; web hedefinde küçük üçgenler çizilir. Sekme adları metin olarak yazılıdır,
+  bu yüzden anlam kaybı yoktur; düzeltme native ikon/sembol işidir.
 
 ## Fazlar
 
