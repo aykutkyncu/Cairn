@@ -104,7 +104,7 @@ describe('SignInScreen', () => {
   it('başlamadan önce veri sınırını ve tıbbi sınırı yazar', async () => {
     const { getByText } = await renderScreen();
 
-    expect(getByText(/yalnız kurduğun çemberin üyelerine açıktır/)).toBeTruthy();
+    expect(getByText(/paylaşmayı sen seçmedikçe kimse göremez/)).toBeTruthy();
     expect(getByText(/tıbbi tavsiye vermez/)).toBeTruthy();
   });
 

@@ -20,6 +20,18 @@ const mockCreateCircle = jest.fn();
 const mockCreateInvitation = jest.fn();
 const mockGenerateToken = jest.fn();
 
+jest.mock('@/features/circles', () => {
+  const actual = jest.requireActual('@/features/circles');
+  return {
+    ...actual,
+    // Kurulum artık listeyi geçersizleyen bir mutation hook'undan geçer.
+    useCreateCircle: () => ({
+      mutateAsync: (input: { name: string; timezone: string }) =>
+        mockCreateCircle(input.name, input.timezone),
+    }),
+  };
+});
+
 jest.mock('@/features/auth', () => {
   const actual = jest.requireActual('@/features/auth');
   return {
@@ -29,6 +41,12 @@ jest.mock('@/features/auth', () => {
     generateInvitationToken: () => mockGenerateToken(),
   };
 });
+
+const mockRouterReplace = jest.fn();
+
+jest.mock('expo-router', () => ({
+  router: { push: jest.fn(), replace: (path: string) => mockRouterReplace(path), back: jest.fn() },
+}));
 
 jest.mock('expo-localization', () => ({
   getCalendars: () => [{ timeZone: 'Europe/Berlin' }],
@@ -52,19 +70,36 @@ describe('CreateCircleScreen', () => {
     const { getByLabelText } = await wrap(<CreateCircleScreen />);
 
     // Assert: öneri, kullanıcının değiştiremeyeceği bir dayatma değildir.
-    expect(getByLabelText(/Çemberin zaman dilimi/).props.value).toBe('Europe/Berlin');
+    expect(getByLabelText(/Zaman dilimi/).props.value).toBe('Europe/Berlin');
   });
 
-  it('ad boşken çember oluşturmaz', async () => {
-    // Arrange
+  it('kendisi için kurarken ad İSTEMEZ', async () => {
+    // Tek başına kullanım birinci sınıf yoldur: kendi takibini tutan
+    // kişiden "bakılan kişinin adı" istemek anlamsızdır.
+    const { queryByLabelText, getByRole } = await wrap(<CreateCircleScreen />);
     const user = userEvent.setup();
+
+    expect(queryByLabelText(/Bakılan kişinin adı/)).toBeNull();
+    await user.press(getByRole('button', { name: 'Başla' }));
+
+    expect(mockCreateCircle).toHaveBeenCalledWith('Kendim', expect.any(String));
+  });
+
+  it('başkası için kurarken ad boşken kaydetmez', async () => {
     const { getByRole } = await wrap(<CreateCircleScreen />);
+    const user = userEvent.setup();
 
-    // Act
-    await user.press(getByRole('button', { name: 'Çemberi oluştur' }));
+    await user.press(getByRole('radio', { name: 'Başkası için' }));
+    await user.press(getByRole('button', { name: 'Başla' }));
 
-    // Assert
     expect(mockCreateCircle).not.toHaveBeenCalled();
+  });
+
+  it('kendisi için kurarken paylaşımdan söz etmez', async () => {
+    // Karşılığı olmayan bir paylaşım vaadi verilmez.
+    const { queryByText } = await wrap(<CreateCircleScreen />);
+
+    expect(queryByText(/görünür/)).toBeNull();
   });
 
   it('adı ve zaman dilimini kırparak gönderir', async () => {
@@ -73,12 +108,23 @@ describe('CreateCircleScreen', () => {
     const { getByLabelText, getByRole } = await wrap(<CreateCircleScreen />);
 
     // Act
+    await user.press(getByRole('radio', { name: 'Başkası için' }));
     await user.type(getByLabelText(/Bakılan kişinin adı/), '  Fatma Demir  ');
-    await user.press(getByRole('button', { name: 'Çemberi oluştur' }));
+    await user.press(getByRole('button', { name: 'Başla' }));
 
     // Assert
     await waitFor(() => expect(mockCreateCircle).toHaveBeenCalledTimes(1));
     expect(mockCreateCircle).toHaveBeenCalledWith('Fatma Demir', 'Europe/Berlin');
+  });
+
+  it('kurulum bitince ekranda kalmaz', async () => {
+    // Ekranda kalmak, kullanıcıyı işe yaramış bir düğmeye tekrar bastırırdı.
+    const { getByRole } = await wrap(<CreateCircleScreen />);
+    const user = userEvent.setup();
+
+    await user.press(getByRole('button', { name: 'Başla' }));
+
+    await waitFor(() => expect(mockRouterReplace).toHaveBeenCalledWith('/'));
   });
 
   it('başarıda yeni çemberi aktif yapar', async () => {
@@ -87,8 +133,9 @@ describe('CreateCircleScreen', () => {
     const { getByLabelText, getByRole } = await wrap(<CreateCircleScreen />);
 
     // Act
+    await user.press(getByRole('radio', { name: 'Başkası için' }));
     await user.type(getByLabelText(/Bakılan kişinin adı/), 'Fatma Demir');
-    await user.press(getByRole('button', { name: 'Çemberi oluştur' }));
+    await user.press(getByRole('button', { name: 'Başla' }));
 
     // Assert
     await waitFor(() => expect(useAuthStore.getState().activeCircleId).toBe(CIRCLE_ID));
@@ -101,8 +148,9 @@ describe('CreateCircleScreen', () => {
     const { getByLabelText, getByRole, findByText } = await wrap(<CreateCircleScreen />);
 
     // Act
+    await user.press(getByRole('radio', { name: 'Başkası için' }));
     await user.type(getByLabelText(/Bakılan kişinin adı/), 'Fatma Demir');
-    await user.press(getByRole('button', { name: 'Çemberi oluştur' }));
+    await user.press(getByRole('button', { name: 'Başla' }));
 
     // Assert
     expect(await findByText('Bu işlem için yetkin yok.')).toBeTruthy();

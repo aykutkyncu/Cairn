@@ -1,6 +1,11 @@
 /** Çember özelliği: üyelik listesi, aktif çember ve roller. */
 
-export { CircleError, listCircles, type CircleErrorCode } from './circle-repository';
+export {
+  CircleError,
+  countCircleMembers,
+  listCircles,
+  type CircleErrorCode,
+} from './circle-repository';
 export {
   canInvite,
   canWrite,
@@ -15,4 +20,10 @@ export {
 } from './circle-schema';
 export { CircleGate, type CircleGateProps } from './circle-gate';
 export { CircleSwitcher } from './circle-switcher';
-export { circleKeys, useActiveCircle, useCircles } from './use-circles';
+export {
+  circleKeys,
+  useActiveCircle,
+  useCircles,
+  useCreateCircle,
+  useIsSharedCircle,
+} from './use-circles';

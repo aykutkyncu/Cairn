@@ -22,6 +22,13 @@ export type MedicalFileViewProps = {
   /** Çemberin saat dilimindeki bugün (`YYYY-MM-DD`). Cihazın günü değil. */
   readonly today: string;
   readonly canWrite: boolean;
+  /**
+   * Kayıt başkalarıyla paylaşılıyor mu?
+   *
+   * Tek kullanıcıya "herkeste görünür" demek karşılığı olmayan bir sözdür;
+   * sözleşme bunu yasaklar.
+   */
+  readonly isShared: boolean;
   readonly onAddMedication: () => void;
   readonly onAddRecord: (type: HealthRecordType) => void;
   readonly onOpenNotes: () => void;
@@ -37,6 +44,7 @@ export function MedicalFileView({
   records,
   today,
   canWrite,
+  isShared,
   onAddMedication,
   onAddRecord,
   onOpenNotes,
@@ -55,8 +63,9 @@ export function MedicalFileView({
       </Text>
 
       <Text tone="inkSoft">
-        Buradaki bilgiler çemberdeki herkeste görünür. Cairn ilaç doğruluğunu denetlemez; kayıtlar
-        hekimin söylediğinin yerine geçmez.
+        {isShared
+          ? 'Buradaki bilgiler eklediğin kişilerde de görünür. Cairn ilaç doğruluğunu denetlemez; kayıtlar hekimin söylediğinin yerine geçmez.'
+          : 'Cairn ilaç doğruluğunu denetlemez; kayıtlar hekimin söylediğinin yerine geçmez.'}
       </Text>
 
       <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>

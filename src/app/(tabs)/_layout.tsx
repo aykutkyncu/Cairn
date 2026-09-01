@@ -1,5 +1,4 @@
 import { View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Tabs } from 'expo-router';
 
 import { useOnlineStatus } from '@/features/app-shell';
@@ -18,7 +17,8 @@ export default function TabsLayout() {
   const isOnline = useOnlineStatus();
 
   return (
-    <SafeAreaView edges={['top']} style={{ backgroundColor: theme.colors.surface, flex: 1 }}>
+    // Güvenli alan kökte uygulanır; burada yalnız içerik düzeni kalır.
+    <View style={{ backgroundColor: theme.colors.surface, flex: 1 }}>
       <View style={{ paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.sm }}>
         <CircleSwitcher />
       </View>
@@ -46,6 +46,6 @@ export default function TabsLayout() {
         <Tabs.Screen name="dosya" options={{ title: 'Dosya' }} />
         <Tabs.Screen name="daha-fazlasi" options={{ title: 'Daha fazlası' }} />
       </Tabs>
-    </SafeAreaView>
+    </View>
   );
 }

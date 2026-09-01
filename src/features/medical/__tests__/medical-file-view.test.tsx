@@ -51,6 +51,7 @@ const renderView = (props: Partial<Parameters<typeof MedicalFileView>[0]> = {}) 
         records={[]}
         today="2026-09-01"
         canWrite
+        isShared={false}
         onAddMedication={jest.fn()}
         onAddRecord={jest.fn()}
         onOpenNotes={jest.fn()}
@@ -73,6 +74,19 @@ describe('MedicalFileView', () => {
     const { getByText } = await renderView();
 
     expect(getByText(/ilaç doğruluğunu denetlemez/)).toBeTruthy();
+  });
+
+  it('tek kullanıcıda paylaşımdan söz etmez', async () => {
+    // "Herkeste görünür" demek, karşılığı olmayan bir söz olurdu.
+    const { queryByText } = await renderView({ isShared: false });
+
+    expect(queryByText(/görünür/)).toBeNull();
+  });
+
+  it('paylaşılan kayıtta görünürlüğü söyler', async () => {
+    const { getByText } = await renderView({ isShared: true });
+
+    expect(getByText(/eklediğin kişilerde de görünür/)).toBeTruthy();
   });
 
   it('aktif ilacı listeler', async () => {

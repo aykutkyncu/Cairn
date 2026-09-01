@@ -57,7 +57,7 @@ describe('CircleSwitcher', () => {
     const { getByText } = await renderSwitcher();
 
     // Assert
-    expect(getByText('Çemberler yükleniyor')).toBeTruthy();
+    expect(getByText('Yükleniyor')).toBeTruthy();
   });
 
   it('çember yokken bunu açıkça söyler', async () => {
@@ -70,10 +70,12 @@ describe('CircleSwitcher', () => {
     });
 
     // Act
-    const { getByText } = await renderSwitcher();
+    const { getByText, queryByText } = await renderSwitcher();
 
     // Assert
-    expect(getByText('Çember yok')).toBeTruthy();
+    // Kurulum yapılmadan "çember" gibi bir iç terim gösterilmez.
+    expect(getByText('Cairn')).toBeTruthy();
+    expect(queryByText(/Çember/)).toBeNull();
   });
 
   it('tek çemberde seçici açmaz', async () => {

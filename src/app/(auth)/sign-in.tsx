@@ -130,8 +130,8 @@ export default function SignInScreen() {
           Cairn
         </Text>
         <Text tone="inkSoft">
-          Bakımı paylaşan aileler için ortak operasyon uygulaması. Görevler, ilaçlar ve notlar
-          çemberindeki herkeste aynı anda görünür.
+          İlaçlarını, randevularını ve notlarını tek yerde takip et. İstersen bakımı paylaştığın
+          kişileri de ekleyebilirsin.
         </Text>
       </View>
 
@@ -140,8 +140,8 @@ export default function SignInScreen() {
           BAŞLAMADAN ÖNCE
         </Text>
         <Text tone="inkSoft" variant="caption">
-          Yazdıkların yalnız kurduğun çemberin üyelerine açıktır; başka çemberler göremez. Cairn
-          tıbbi tavsiye vermez, teşhis koymaz ve ilaç doğruluğunu denetlemez.
+          Kayıtların yalnız sana açıktır; paylaşmayı sen seçmedikçe kimse göremez. Cairn tıbbi
+          tavsiye vermez, teşhis koymaz ve ilaç doğruluğunu denetlemez.
         </Text>
       </Card>
 

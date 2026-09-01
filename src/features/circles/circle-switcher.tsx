@@ -27,7 +27,7 @@ export function CircleSwitcher() {
     return (
       <View style={{ justifyContent: 'center', minHeight: MIN_TOUCH_TARGET }}>
         <Text tone="muted" variant="caption">
-          Çemberler yükleniyor
+          Yükleniyor
         </Text>
       </View>
     );
@@ -36,8 +36,10 @@ export function CircleSwitcher() {
   if (activeCircle === null) {
     return (
       <View style={{ justifyContent: 'center', minHeight: MIN_TOUCH_TARGET }}>
+        {/* Kurulum yapılmadan "çember" gibi bir iç terim gösterilmez;
+            kullanıcı bu sözcüğü hiç duymak zorunda değildir. */}
         <Text tone="muted" variant="caption">
-          Çember yok
+          Cairn
         </Text>
       </View>
     );

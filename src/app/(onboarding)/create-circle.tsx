@@ -1,16 +1,26 @@
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { router } from 'expo-router';
 import * as Localization from 'expo-localization';
 
-import { createCircle, useAuthStore, type AuthErrorCode } from '@/features/auth';
-import { Button, Card, Input, Text, useTheme } from '@/ui';
+import { useAuthStore, type AuthErrorCode } from '@/features/auth';
+import { useCreateCircle } from '@/features/circles';
+import { Button, Card, Input, MIN_TOUCH_TARGET, Text, useTheme } from '@/ui';
 
 /**
- * Çember kurma ekranı.
+ * Kurulum ekranı: takip kimin için?
  *
- * Davetsiz gelen kullanıcı için ilk adım: bakılan kişinin adı ve çemberin
- * zaman dilimi. Zaman dilimi ÇEMBERE aittir, cihaza değil — İstanbul'daki ve
- * Berlin'deki iki bakım veren aynı günü aynı gün olarak görmelidir.
+ * **Tek başına kullanım birinci sınıf yoldur.** Varsayılan "Kendim için";
+ * bu yolda ad sorulmaz ve paylaşımdan hiç söz edilmez. Kimseyle bağ kurmak
+ * istemeyen kullanıcıya davet, paylaşım ve "çemberdeki herkes" metinleri
+ * göstermek, karşılığı olmayan bir söz vermektir.
+ *
+ * Altta yatan yapı iki durumda da aynıdır: tek üyeli bir çember de
+ * çemberdir. Kullanıcı bunu bilmek zorunda değildir; "çember" sözcüğü
+ * kendisi için kuran kişinin ekranında hiç geçmez.
+ *
+ * Zaman dilimi kayda aittir, cihaza değil — İstanbul'daki ve Berlin'deki iki
+ * bakım veren aynı günü aynı gün olarak görmelidir.
  */
 
 const ERROR_MESSAGES: Readonly<Record<AuthErrorCode, string>> = {
@@ -22,7 +32,7 @@ const ERROR_MESSAGES: Readonly<Record<AuthErrorCode, string>> = {
   invitation_already_used: 'Bu davet daha önce kullanılmış.',
   forbidden: 'Bu işlem için yetkin yok.',
   unauthenticated: 'Önce giriş yapmalısın.',
-  unknown: 'Çember oluşturulamadı. Tekrar deneyebilirsin.',
+  unknown: 'Kayıt oluşturulamadı. Tekrar deneyebilirsin.',
 };
 
 /** Cihaz saat dilimi yalnız BAŞLANGIÇ ÖNERİSİDİR; kullanıcı değiştirebilir. */
@@ -36,19 +46,36 @@ type ScreenState =
   | { readonly kind: 'saving' }
   | { readonly kind: 'error'; readonly code: AuthErrorCode };
 
+/** Takip kimin için tutuluyor? */
+type Subject = 'self' | 'other';
+
+/**
+ * Kendisi için kuran kullanıcının kaydına yazılan ad.
+ *
+ * Sunucudaki sütun boş bırakılamaz; kullanıcıya ad sormak yerine sabit bir
+ * değer yazılır. Bu ad hiçbir ekranda gösterilmez.
+ */
+export const SELF_CARE_RECIPIENT_NAME = 'Kendim';
+
 export default function CreateCircleScreen() {
   const theme = useTheme();
   const setActiveCircleId = useAuthStore((store) => store.setActiveCircleId);
 
+  const [subject, setSubject] = useState<Subject>('self');
   const [careRecipientName, setCareRecipientName] = useState('');
   const [timezone, setTimezone] = useState(suggestedTimezone);
   const [state, setState] = useState<ScreenState>({ kind: 'idle' });
+  const create = useCreateCircle();
 
-  const canSubmit = careRecipientName.trim().length > 0 && state.kind !== 'saving';
+  // Kendisi için kuran kullanıcıdan ad istenmez; o yüzden kaydetme koşulu da
+  // ada bağlı değildir.
+  const canSubmit =
+    (subject === 'self' || careRecipientName.trim().length > 0) && state.kind !== 'saving';
 
   const handleSubmit = async (): Promise<void> => {
     setState({ kind: 'saving' });
-    const result = await createCircle(careRecipientName.trim(), timezone.trim());
+    const name = subject === 'self' ? SELF_CARE_RECIPIENT_NAME : careRecipientName.trim();
+    const result = await create.mutateAsync({ name, timezone: timezone.trim() });
 
     if (!result.ok) {
       setState({ kind: 'error', code: result.code });
@@ -57,6 +84,9 @@ export default function CreateCircleScreen() {
 
     setActiveCircleId(result.data);
     setState({ kind: 'idle' });
+    // Kurulum bitti; ekranda kalmak kullanıcıyı işe yaramış bir düğmeye
+    // tekrar bastırırdı. Nereye gidileceğine kök ekran karar verir.
+    router.replace('/');
   };
 
   return (
@@ -66,35 +96,51 @@ export default function CreateCircleScreen() {
     >
       <View style={{ gap: theme.spacing.sm }}>
         <Text accessibilityRole="header" variant="title">
-          Kimin bakımını paylaşıyorsun?
+          Takibi kimin için tutuyorsun?
         </Text>
         <Text tone="inkSoft">
-          Bu bilgi yalnız çemberine kattığın kişilerle paylaşılır. Bildirim metinlerinde ve
-          paylaşılan özetlerde görünmez.
+          İstersen sonradan başkalarını da ekleyebilirsin. Şimdi seçmek zorunda değilsin — bunu daha
+          sonra da değiştirebilirsin.
         </Text>
       </View>
 
       <Card>
-        <Input
-          autoCapitalize="words"
-          label="Bakılan kişinin adı"
-          onChangeText={setCareRecipientName}
-          placeholder="Örnek: Ayşe Yılmaz"
-          required
-          value={careRecipientName}
-        />
+        <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+          <SubjectChoice
+            label="Kendim için"
+            selected={subject === 'self'}
+            onPress={() => setSubject('self')}
+          />
+          <SubjectChoice
+            label="Başkası için"
+            selected={subject === 'other'}
+            onPress={() => setSubject('other')}
+          />
+        </View>
+
+        {subject === 'other' ? (
+          <Input
+            autoCapitalize="words"
+            hint="Bu ad yalnız eklediğin kişilerde görünür; bildirim metinlerinde ve özetlerde geçmez."
+            label="Bakılan kişinin adı"
+            onChangeText={setCareRecipientName}
+            placeholder="Örnek: Ayşe Yılmaz"
+            required
+            value={careRecipientName}
+          />
+        ) : null}
 
         <Input
           autoCapitalize="none"
-          hint="Görevler ve günlük özet bu saat dilimine göre hesaplanır. Farklı şehirlerdeki üyeler aynı günü görür."
-          label="Çemberin zaman dilimi"
+          hint="Görevler ve günlük özet bu saat dilimine göre hesaplanır."
+          label="Zaman dilimi"
           onChangeText={setTimezone}
           value={timezone}
         />
 
         <Button
           disabled={!canSubmit}
-          label="Çemberi oluştur"
+          label="Başla"
           loading={state.kind === 'saving'}
           loadingLabel="Oluşturuluyor"
           onPress={() => {
@@ -102,6 +148,12 @@ export default function CreateCircleScreen() {
           }}
         />
       </Card>
+
+      {subject === 'other' ? (
+        <Text tone="inkSoft" variant="caption">
+          Yazdıkların, sonradan eklediğin kişilerde de görünür.
+        </Text>
+      ) : null}
 
       {state.kind === 'error' ? (
         <Card variant="sunk">
@@ -112,5 +164,43 @@ export default function CreateCircleScreen() {
         </Card>
       ) : null}
     </ScrollView>
+  );
+}
+
+/** Tek dokunuşluk seçim. Radyo davranışı erişilebilirlik için açıkça verilir. */
+function SubjectChoice({
+  label,
+  selected,
+  onPress,
+}: {
+  readonly label: string;
+  readonly selected: boolean;
+  readonly onPress: () => void;
+}) {
+  const theme = useTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ selected }}
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={{
+        alignItems: 'center',
+        backgroundColor: selected ? theme.colors.surfaceSunk : theme.colors.surface,
+        borderColor: selected ? theme.colors.accent : theme.colors.rule,
+        borderRadius: theme.radius.md,
+        borderWidth: selected ? 2 : 1,
+        flex: 1,
+        justifyContent: 'center',
+        minHeight: MIN_TOUCH_TARGET,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+      }}
+    >
+      <Text tone={selected ? 'accent' : 'ink'} style={{ fontWeight: selected ? '700' : '400' }}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }

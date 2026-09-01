@@ -50,9 +50,9 @@ export function CircleGate({ children }: CircleGateProps) {
   if (activeCircle === null) {
     return (
       <EmptyState
-        title="Henüz bir çemberin yok"
-        description="Bakımını paylaştığın kişi için bir çember kur, sonra diğerlerini davet et."
-        actionLabel="Çember kur"
+        title="Başlayalım"
+        description="Kendi sağlığını mı takip edeceksin, yoksa birinin bakımını mı? Kurulum tek adım."
+        actionLabel="Başla"
         onAction={() => router.push('/(onboarding)/create-circle')}
       />
     );

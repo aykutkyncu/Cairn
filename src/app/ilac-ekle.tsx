@@ -76,9 +76,7 @@ function CreateMedicationForm({ circleId }: { readonly circleId: string }) {
         İlaç ekle
       </Text>
 
-      <Text tone="inkSoft">
-        Cairn ilaç doğruluğunu denetlemez. Yazdıkların çemberdeki herkeste görünür.
-      </Text>
+      <Text tone="inkSoft">Cairn ilaç doğruluğunu denetlemez.</Text>
 
       <Card>
         <Input
