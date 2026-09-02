@@ -26,7 +26,13 @@ const mockUseActiveCircle = jest.fn();
 // etmek kapının içindeki çağrıyı değiştirmezdi.
 jest.mock('@/features/circles/use-circles', () => {
   const actual = jest.requireActual('@/features/circles/use-circles');
-  return { ...actual, useActiveCircle: () => mockUseActiveCircle() };
+  return {
+    ...actual,
+    useActiveCircle: () => mockUseActiveCircle(),
+    // Paylaşım metni sunucu sayımına bağlıdır; ekran testinde tek kullanıcı
+    // varsayılır.
+    useIsSharedCircle: () => false,
+  };
 });
 
 jest.mock('expo-router', () => ({
@@ -146,7 +152,7 @@ describe('sekme ekranları', () => {
     const { getByText } = await renderScreen(Screen);
 
     // Assert
-    expect(getByText('Henüz bir çemberin yok')).toBeTruthy();
+    expect(getByText('Başlayalım')).toBeTruthy();
   });
 
   it.each(allScreens)('%s hata durumunda teknik ayrıntı göstermez', async (_title, Screen) => {

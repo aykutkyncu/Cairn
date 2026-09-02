@@ -189,6 +189,23 @@ Faz 05 ile eklenenler:
   dayanır; web hedefinde küçük üçgenler çizilir. Sekme adları metin olarak yazılıdır,
   bu yüzden anlam kaybı yoktur; düzeltme native ikon/sembol işidir.
 
+Faz 06 ile eklenenler:
+
+- **Gerçek Storage'a hiç yükleme yapılmamıştır.** Kamera, galeri ve görsel işleme native
+  modülleri birim testlerinde taklit edilmiştir; gerçek bir cihazda belge seçilip
+  yüklenmemiştir. Sıkışma oranı hakkında vaat verilmez: oran görselin içeriğine bağlıdır.
+- **OCR yazılmamıştır ve Faz 06 kapsamı dışına alınmıştır.** Kılavuz OCR'ı koşullu
+  ("OCR istenecekse") tanımlar ve native/harici bağımlılıklı özelliklerin koşullar
+  sağlanmadıkça kapalı kalmasını ister. Fotoğraftan ilaç tanıma zaten Faz 10'un konusudur;
+  OCR oraya bırakılmıştır. Bu nedenle Faz 06'nın "OCR sonucu kullanıcı onayı olmadan ilaç
+  kaydına dönüşmez" kriteri **konusuz** olarak geçilmiştir — kod yolu yoktur.
+- **İmzalı URL süresi gerçek Storage'a karşı ölçülmemiştir.** 60 saniyelik süre istemci
+  kodunda sabittir ve birim testiyle sınanır; sürenin dolmasından sonra erişimin
+  reddedildiği gerçek bir istekle görülmemiştir.
+- Storage politikasının uçtan uca davranışı (`supabase/tests/0003_documents_and_search.test.sql`)
+  yalnız CI'daki pgTAP koşusuyla doğrulanır; bu makinede Docker kurulu olmadığı için
+  yerelde çalıştırılmamıştır.
+
 ## Fazlar
 
 Geliştirme, `Cairn_Claude_Code_Uygulama_Kilavuzu.pdf` içindeki 17 fazlı sırayı izler.
@@ -202,7 +219,8 @@ Bir fazın kabul kriterleri kanıtlanmadan sonraki faza geçilmez.
 | 03 - Kimlik doğrulama ve atomik çember daveti  | Kod tarafı tamam, gerçek akış açık    |
 | 04 - Uygulama iskeleti ve güvenli veri katmanı | Kod tarafı tamam, cihaz testi açık    |
 | 05 - Bakım takvimi (ürünün kalbi)              | Kod tarafı tamam, cihaz testi açık    |
-| 06-16                                          | Başlanmadı                            |
+| 06 - Tıbbi dosya                               | Kod tarafı tamam, cihaz testi açık    |
+| 07-16                                          | Başlanmadı                            |
 
 "Kod tarafı tamam" demek, o fazın kabul kriterlerinin **tamamı kanıtlandı** demek değildir.
 Her fazın kanıtlanmamış kalan adımları yukarıdaki "Bilinen eksikler" bölümünde tek tek

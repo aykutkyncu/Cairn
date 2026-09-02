@@ -2,7 +2,9 @@
 
 ## Ürün ve sınırlar
 
-Cairn, bakımı paylaşan aileler için ortak operasyon uygulamasıdır. Birincil kullanıcı hasta değil, bakımı yöneten kişidir. Her ürün kararı şu soruyu geçmelidir: Bu, bakım verenin yükünü azaltıyor mu?
+Cairn hem kendi sağlığını takip eden kişi hem de bakımı paylaşan aileler içindir. **Tek başına kullanım birinci sınıf yoldur; paylaşım isteğe bağlı bir katmandır.** Kullanıcı hiç kimseyle bağ kurmadan ilaçlarını, görevlerini, ölçümlerini ve belgelerini takip edebilmeli ve hatırlatma alabilmelidir; davet ve paylaşım ancak kullanıcı istediğinde devreye girer.
+
+Her ürün kararı şu soruyu geçmelidir: Bu, bakımı yürüten kişinin — ister kendisi için ister bir başkası için — yükünü azaltıyor mu? Paylaşım varsayılan değildir: tek kullanıcıya "çemberdeki herkes görür" gibi, karşılığı olmayan bir metin gösterilmez.
 
 Uygulama tıbbi tavsiye vermez, teşhis koymaz ve ilaç doğruluğunu garanti etmez. Sağlık verisi özel nitelikli kişisel veridir. Harici AI veya analiz hizmetine sağlık verisi ancak ilgili, ayrı açık rıza ve yazılı veri akışı değerlendirmesinden sonra gönderilebilir. AI kapalı veya kullanılamaz durumdayken tüm temel akışlar çalışır.
 

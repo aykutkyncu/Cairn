@@ -5,8 +5,11 @@ export {
   completeMagicLink,
   createCircle,
   createInvitation,
+  linkEmail,
   sendMagicLink,
   signOut,
+  startAnonymously,
+  verifyEmailCode,
   type AuthErrorCode,
   type AuthResult,
 } from './auth-repository';

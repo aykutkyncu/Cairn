@@ -51,7 +51,10 @@ describe('AcceptInviteScreen', () => {
   it('bozuk biçimli tokenı sunucuya hiç göndermez', async () => {
     // Arrange: token alfabesinde olmayan karakterler.
     mockParams.mockReturnValue({ token: 'karışık!!token' });
-    useAuthStore.setState({ status: 'signed-in', user: { id: 'u-1', email: null } });
+    useAuthStore.setState({
+      status: 'signed-in',
+      user: { id: 'u-1', email: null, isAnonymous: false },
+    });
 
     // Act
     const { findByText } = await renderScreen();
@@ -64,7 +67,10 @@ describe('AcceptInviteScreen', () => {
   it('token parametresi hiç yoksa hata gösterir', async () => {
     // Arrange
     mockParams.mockReturnValue({});
-    useAuthStore.setState({ status: 'signed-in', user: { id: 'u-1', email: null } });
+    useAuthStore.setState({
+      status: 'signed-in',
+      user: { id: 'u-1', email: null, isAnonymous: false },
+    });
 
     // Act
     const { findByText } = await renderScreen();
@@ -100,7 +106,10 @@ describe('AcceptInviteScreen', () => {
 
   it('başarılı kabulde aktif çemberi ayarlar', async () => {
     // Arrange
-    useAuthStore.setState({ status: 'signed-in', user: { id: 'u-1', email: null } });
+    useAuthStore.setState({
+      status: 'signed-in',
+      user: { id: 'u-1', email: null, isAnonymous: false },
+    });
 
     // Act
     const { findByText } = await renderScreen();
@@ -113,7 +122,10 @@ describe('AcceptInviteScreen', () => {
   it('tüketilmiş davette yeni bağlantı istemeyi önerir', async () => {
     // Arrange
     mockAcceptInvitation.mockResolvedValue({ ok: false, code: 'invitation_already_used' });
-    useAuthStore.setState({ status: 'signed-in', user: { id: 'u-1', email: null } });
+    useAuthStore.setState({
+      status: 'signed-in',
+      user: { id: 'u-1', email: null, isAnonymous: false },
+    });
 
     // Act
     const { findByText } = await renderScreen();
@@ -125,7 +137,10 @@ describe('AcceptInviteScreen', () => {
   it('hata ekranına tokenı yazmaz', async () => {
     // Arrange
     mockAcceptInvitation.mockResolvedValue({ ok: false, code: 'invitation_expired' });
-    useAuthStore.setState({ status: 'signed-in', user: { id: 'u-1', email: null } });
+    useAuthStore.setState({
+      status: 'signed-in',
+      user: { id: 'u-1', email: null, isAnonymous: false },
+    });
 
     // Act
     const { findByText, toJSON } = await renderScreen();

@@ -1,7 +1,7 @@
 import { ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { CircleGate, canWrite, useActiveCircle } from '@/features/circles';
+import { CircleGate, canWrite, useActiveCircle, useIsSharedCircle } from '@/features/circles';
 import { MedicalFileView, useHealthRecords, useMedications } from '@/features/medical';
 import { todayLocalDate } from '@/features/tasks';
 import { ErrorState, Skeleton, useTheme } from '@/ui';
@@ -24,6 +24,7 @@ function MedicalFileContainer({ circleId }: { readonly circleId: string }) {
   const { activeCircle } = useActiveCircle();
   const timeZone = activeCircle?.timezone ?? 'Europe/Istanbul';
 
+  const isShared = useIsSharedCircle(circleId);
   const medications = useMedications(circleId);
   const records = useHealthRecords(circleId, ['allergy', 'diagnosis', 'doctor']);
 
@@ -62,9 +63,11 @@ function MedicalFileContainer({ circleId }: { readonly circleId: string }) {
         // ilaç iki bakım verende farklı gün altında görünmemelidir.
         today={todayLocalDate(timeZone)}
         canWrite={activeCircle !== null && canWrite(activeCircle.role)}
+        isShared={isShared}
         onAddMedication={() => router.push('/ilac-ekle')}
         onAddRecord={(type) => router.push({ pathname: '/kayit-ekle', params: { type } })}
         onOpenNotes={() => router.push('/notlar')}
+        onOpenDocuments={() => router.push('/belgeler')}
         onOpenSearch={() => router.push('/ara')}
       />
     </ScrollView>

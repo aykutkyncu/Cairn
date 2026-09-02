@@ -59,3 +59,37 @@ export const listCircles = async (): Promise<readonly CircleSummary[]> => {
 
   return parsed.data.map(toCircleSummary);
 };
+
+/**
+ * Çemberin aktif üye sayısı.
+ *
+ * Arayüz metinleri buna göre değişir: tek kullanıcıya "çemberdeki herkes
+ * görür" demek, karşılığı olmayan bir söz vermektir. Sözleşme bunu
+ * yasaklar.
+ *
+ * Sayı güvenlik kararı için KULLANILMAZ; yalnız metin seçer. Yetki RLS'tedir.
+ */
+export const countCircleMembers = async (circleId: string): Promise<number> => {
+  if (!isSupabaseConfigured) throw new CircleError('not_configured');
+
+  let response: { count: number | null; error: { code?: string } | null };
+  try {
+    response = await getSupabaseClient()
+      .from('circle_members')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('circle_id', circleId)
+      .eq('invitation_state', 'active')
+      .is('deleted_at', null);
+  } catch {
+    throw new CircleError('network');
+  }
+
+  if (response.error !== null) {
+    logger.warn('count_circle_members_failed', { code: response.error.code ?? '' });
+    throw new CircleError(response.error.code === '42501' ? 'unauthenticated' : 'network');
+  }
+
+  // Sayı okunamadıysa 1 varsayılır: paylaşımdan söz etmemek, olmayan bir
+  // paylaşımı varmış gibi anlatmaktan iyidir.
+  return response.count ?? 1;
+};

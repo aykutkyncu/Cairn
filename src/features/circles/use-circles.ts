@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { useAuthStore } from '@/features/auth';
+import { createCircle, useAuthStore } from '@/features/auth';
 
-import { listCircles } from './circle-repository';
+import { countCircleMembers, listCircles } from './circle-repository';
 import type { CircleSummary } from './circle-schema';
 
 /**
@@ -18,7 +18,45 @@ import type { CircleSummary } from './circle-schema';
 export const circleKeys = {
   all: ['circles'] as const,
   list: () => [...circleKeys.all, 'list'] as const,
+  memberCount: (circleId: string) => [...circleKeys.all, 'member-count', circleId] as const,
 } as const;
+
+/**
+ * Çember paylaşılıyor mu (birden çok aktif üye var mı)?
+ *
+ * Yalnız ARAYÜZ METNİ için kullanılır. Tek kullanıcıya "çemberdeki herkes
+ * görür" demek karşılığı olmayan bir sözdür. Sayı okunamadığında paylaşımdan
+ * söz edilmez: olmayan bir paylaşımı varmış gibi anlatmak, var olanı
+ * söylememekten kötüdür.
+ */
+export const useIsSharedCircle = (circleId: string | null): boolean => {
+  const query = useQuery({
+    queryKey: circleKeys.memberCount(circleId ?? ''),
+    queryFn: () => countCircleMembers(circleId as string),
+    enabled: circleId !== null,
+  });
+
+  return (query.data ?? 1) > 1;
+};
+
+/**
+ * Kurulum: kaydı oluşturur ve LİSTEYİ GEÇERSİZLER.
+ *
+ * Geçersizleme olmadan kayıt sunucuda oluşuyor ama önbellekteki boş liste
+ * duruyordu: kullanıcı kurulumu bitirdiğinde "Başlayalım" ekranına geri
+ * düşüyordu. Cihazda ilk çalıştırmada görülen kusur buydu.
+ */
+export const useCreateCircle = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { readonly name: string; readonly timezone: string }) =>
+      createCircle(input.name, input.timezone),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: circleKeys.all });
+    },
+  });
+};
 
 export const useCircles = () => {
   const status = useAuthStore((state) => state.status);

@@ -72,10 +72,7 @@ function EmptyDay({ onAddTask }: { readonly onAddTask?: (() => void) | undefined
   return (
     <Card>
       <Text variant="title">Bugün için bir şey planlanmamış</Text>
-      <Text tone="inkSoft">
-        İlaç, randevu veya ziyaret ekleyerek başlayabilirsin. Eklediğin görevler çemberdeki herkeste
-        görünür.
-      </Text>
+      <Text tone="inkSoft">İlaç, randevu veya ziyaret ekleyerek başlayabilirsin.</Text>
       {onAddTask === undefined ? null : (
         <Pressable
           accessibilityRole="button"

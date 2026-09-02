@@ -60,8 +60,6 @@ function CreateRecordForm({
         {`${label} ekle`}
       </Text>
 
-      <Text tone="inkSoft">Yazdıkların çemberdeki herkeste görünür.</Text>
-
       <Card>
         <Input label={`${label} başlığı`} onChangeText={setTitle} required value={title} />
         <Input label="Açıklama" multiline onChangeText={setBody} value={body} />

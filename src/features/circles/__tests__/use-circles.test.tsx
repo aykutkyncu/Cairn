@@ -40,7 +40,10 @@ describe('useActiveCircle', () => {
   beforeEach(() => {
     mockListCircles.mockReset();
     resetAuthStore();
-    useAuthStore.setState({ status: 'signed-in', user: { id: 'u-1', email: null } });
+    useAuthStore.setState({
+      status: 'signed-in',
+      user: { id: 'u-1', email: null, isAnonymous: false },
+    });
     client = createQueryClient();
     client.setDefaultOptions({ queries: { retry: false, gcTime: 0 } });
   });

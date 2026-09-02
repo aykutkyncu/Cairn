@@ -23,15 +23,21 @@ import { useAuthStore, type AuthUser } from './auth-store';
 
 /** Supabase kullanıcısını uygulamanın sakladığı asgari biçime indirger. */
 const toAuthUser = (
-  user: { id?: unknown; email?: unknown } | null | undefined,
+  user: { id?: unknown; email?: unknown; is_anonymous?: unknown } | null | undefined,
 ): AuthUser | null => {
   if (user === null || user === undefined) return null;
   if (typeof user.id !== 'string' || user.id.length === 0) return null;
 
+  // E-postası olan bir hesap anonim sayılmaz: e-posta bağlandığı anda hesap
+  // kurtarılabilir hale gelir. Sunucunun `is_anonymous` alanı okunamazsa da
+  // e-postanın varlığı belirleyicidir.
+  const email = typeof user.email === 'string' && user.email.length > 0 ? user.email : null;
+
   return {
     id: user.id,
     // E-posta yalnız arayüzde gösterilir; log ve analytics'e yazılmaz.
-    email: typeof user.email === 'string' ? user.email : null,
+    email,
+    isAnonymous: email === null || user.is_anonymous === true,
   };
 };
 
